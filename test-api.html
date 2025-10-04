@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <div id="results"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(title, success, data) {
+            const div = document.createElement('div');
+            div.className = `test ${success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function testAPI() {
+            const urls = [
+                'https://trader-em8b.onrender.com/api/trades/',
+                'http://127.0.0.1:8000/api/trades/'
+            ];
+            
+            addResult('🔍 Browser Info', true, {
+                origin: window.location.origin,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            });
+            
+            for (const url of urls) {
+                try {
+                    console.log(`Testing ${url}...`);
+                    const startTime = Date.now();
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        console.log(`Timeout for ${url}`);
+                        controller.abort();
+                    }, 10000);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        signal: controller.signal,
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        addResult(`✅ ${url}`, true, {
+                            status: response.status,
+                            duration: `${duration}ms`,
+                            dataLength: data.length,
+                            sampleData: data[0] || 'No data',
+                            headers: Object.fromEntries(response.headers.entries())
+                        });
+                    } else {
+                        addResult(`❌ ${url}`, false, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            duration: `${duration}ms`
+                        });
+                    }
+                } catch (error) {
+                    addResult(`❌ ${url}`, false, {
+                        error: error.message,
+                        name: error.name,
+                        stack: error.stack
+                    });
+                }
+            }
+        }
+        
+        // Test on page load
+        testAPI();
+    </script>
+</body>
+</html>

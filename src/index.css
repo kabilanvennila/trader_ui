@@ -1,0 +1,73 @@
+@import url('https://fonts.cdnfonts.com/css/freehand');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* Table row hover effect */
+.table-row {
+  transition: background-color 0.2s ease;
+}
+
+.table-row td {
+  padding-top: 24px !important;
+  padding-bottom: 24px !important;
+}
+
+.table-row:hover td {
+  background-color: #F9FAFB !important;
+}
+
+.table-row:hover td.bias-cell-bullish {
+  background-color: #A7F3D0 !important;
+}
+
+.table-row:hover td.bias-cell-bearish {
+  background-color: #FECACA !important;
+}
+
+.table-row:hover td.bias-cell-neutral {
+  background-color: #E5E7EB !important;
+}
+
+/* Slide-in animation for form */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

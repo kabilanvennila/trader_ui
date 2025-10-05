@@ -8,7 +8,13 @@ import {
   UserSettings,
   PaginatedResponse,
   TradeFilters,
-  PaginationParams 
+  PaginationParams,
+  Transfer,
+  BackendTransfer,
+  FrontendTransfer,
+  CreateTransferRequest,
+  UpdateTransferRequest,
+  BackendTransfersResponse
 } from '../types/api';
 import { config } from '../config';
 import { transformBackendTrades, transformToBackendTrade } from '../utils/dataTransforms';
@@ -164,6 +170,32 @@ const apiClient = new ApiClient(API_BASE_URL);
 
 // Using local server only
 const LOCAL_API_URL = 'http://127.0.0.1:8000/api/trades/';
+const LOCAL_TRANSFERS_API_URL = 'http://127.0.0.1:8000/api/transfers/';
+
+// Transfer Data Transform Functions
+const transformBackendTransfers = (backendTransfers: BackendTransfer[]): FrontendTransfer[] => {
+  return backendTransfers.map(transfer => ({
+    id: transfer.id.toString(),
+    date: {
+      month: new Date(transfer.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+      day: new Date(transfer.date).getDate().toString()
+    },
+    type: transfer.type.toLowerCase() as 'deposit' | 'withdrawal',
+    amount: parseFloat(transfer.amount),
+    method: transfer.notes,
+    status: 'completed' as const,
+    reference: `TXN${transfer.id}`
+  }));
+};
+
+const transformToBackendTransfer = (transferData: CreateTransferRequest): CreateTransferRequest => {
+  return {
+    date: transferData.date,
+    type: transferData.type,
+    amount: transferData.amount,
+    notes: transferData.notes
+  };
+};
 
 
 // Trade API Services - with mock fallback
@@ -420,6 +452,198 @@ export const userApi = {
   // Update user settings
   updateSettings: async (settings: Partial<UserSettings>): Promise<ApiResponse<UserSettings>> => {
     return apiClient.put<UserSettings>('/user/settings', settings);
+  },
+};
+
+// Transfer API Services
+export const transferApi = {
+  // Get all transfers
+  getTransfers: async (): Promise<ApiResponse<FrontendTransfer[]>> => {
+    console.log('🔗 Using Local API for getTransfers');
+    
+    try {
+      console.log('📡 Fetching transfers from local server:', LOCAL_TRANSFERS_API_URL);
+      
+      const response = await fetch(LOCAL_TRANSFERS_API_URL, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const rawResponse: BackendTransfersResponse = await response.json();
+      console.log('📦 Raw backend response:', rawResponse);
+      
+      // Extract transfers from the response
+      const backendTransfers = rawResponse.data.transfers;
+      console.log('📦 Parsed backend transfers:', backendTransfers);
+      
+      // Transform backend data to frontend format
+      const transformedTransfers = transformBackendTransfers(backendTransfers);
+      console.log('🔄 Transformed transfers:', transformedTransfers);
+      
+      return {
+        success: true,
+        data: transformedTransfers,
+        message: 'Success'
+      };
+    } catch (error) {
+      console.error('❌ Failed to fetch transfers from local server:', error);
+      
+      // Return empty data instead of throwing error to prevent app crash
+      return {
+        success: false,
+        data: [],
+        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+      };
+    }
+  },
+
+  // Create a new transfer
+  createTransfer: async (transferData: CreateTransferRequest): Promise<ApiResponse<FrontendTransfer>> => {
+    console.log('🔗 Using Local API for createTransfer');
+    
+    try {
+      console.log('📡 Creating transfer at local server:', LOCAL_TRANSFERS_API_URL);
+      
+      // Transform frontend data to backend format
+      const backendData = transformToBackendTransfer(transferData);
+      console.log('📤 Sending transfer data:', backendData);
+      
+      const response = await fetch(LOCAL_TRANSFERS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendData),
+      });
+      
+      console.log('📡 Create transfer response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+      
+      const rawResponse = await response.json();
+      console.log('📦 Created transfer raw response:', rawResponse);
+      
+      // Handle different response formats
+      let createdTransfer: BackendTransfer;
+      if (rawResponse && typeof rawResponse === 'object') {
+        // If it's wrapped in a response object
+        if (rawResponse.data) {
+          createdTransfer = rawResponse.data;
+        } else if (rawResponse.transfer) {
+          createdTransfer = rawResponse.transfer;
+        } else {
+          createdTransfer = rawResponse;
+        }
+      } else {
+        throw new Error('Backend returned unexpected data format');
+      }
+      
+      console.log('📦 Parsed created transfer:', createdTransfer);
+      
+      // Transform backend response to frontend format
+      const transformedTransfer = transformBackendTransfers([createdTransfer])[0];
+      
+      return {
+        success: true,
+        data: transformedTransfer,
+        message: 'Transfer created successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to create transfer at local server:', error);
+      
+      // Return error response instead of throwing to prevent app crash
+      return {
+        success: false,
+        data: null as any,
+        message: error instanceof Error ? error.message : 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+      };
+    }
+  },
+
+  // Update an existing transfer
+  updateTransfer: async (id: string, transferData: Partial<UpdateTransferRequest>): Promise<ApiResponse<FrontendTransfer>> => {
+    console.log('🔗 Using Local API for updateTransfer');
+    
+    try {
+      const url = `${LOCAL_TRANSFERS_API_URL}${id}/`;
+      console.log('📡 Updating transfer at local server:', url);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transferData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const rawResponse = await response.json();
+      const updatedTransfer = transformBackendTransfers([rawResponse])[0];
+      
+      return {
+        success: true,
+        data: updatedTransfer,
+        message: 'Transfer updated successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to update transfer at local server:', error);
+      
+      return {
+        success: false,
+        data: null as any,
+        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+      };
+    }
+  },
+
+  // Delete a transfer
+  deleteTransfer: async (id: string): Promise<ApiResponse<void>> => {
+    console.log('🔗 Using Local API for deleteTransfer');
+    
+    try {
+      const url = `${LOCAL_TRANSFERS_API_URL}${id}/`;
+      console.log('📡 Deleting transfer at local server:', url);
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return {
+        success: true,
+        data: undefined,
+        message: 'Transfer deleted successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to delete transfer at local server:', error);
+      
+      return {
+        success: false,
+        data: undefined,
+        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+      };
+    }
   },
 };
 

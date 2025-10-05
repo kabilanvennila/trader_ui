@@ -1,18 +1,139 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { transferApi } from '../services/api';
+
+interface TransferFormData {
+  type: 'deposit' | 'withdrawal';
+  amount: string;
+  notes: string;
+  date: string;
+}
 
 function Transfers() {
   // State for Add New Transfer form
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState<TransferFormData>({
+    type: 'deposit',
+    amount: '',
+    notes: '',
+    date: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
+  });
+  const [formErrors, setFormErrors] = useState<Partial<TransferFormData>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get transfers from context
-  const { transfers } = useAppContext();
+  const { transfers, setTransfers, refreshTransfers, loading } = useAppContext();
 
   // Calculate totals
   const totalDeposits = transfers.filter(t => t.type === 'deposit').reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawals = transfers.filter(t => t.type === 'withdrawal').reduce((sum, t) => sum + t.amount, 0);
   const totalCapital = totalDeposits - totalWithdrawals;
+
+  // Form handling functions
+  const handleInputChange = (field: keyof TransferFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Partial<TransferFormData> = {};
+    
+    if (!formData.amount || formData.amount.trim() === '') {
+      errors.amount = 'Amount is required';
+    } else if (isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
+      errors.amount = 'Please enter a valid amount';
+    }
+    
+    if (!formData.notes || formData.notes.trim() === '') {
+      errors.notes = 'Notes are required';
+    }
+    
+    if (!formData.date) {
+      errors.date = 'Date is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Create transfer via API
+      const response = await transferApi.createTransfer({
+        date: formData.date,
+        type: formData.type.toUpperCase() as 'DEPOSIT' | 'WITHDRAWAL',
+        amount: formData.amount,
+        notes: formData.notes
+      });
+      
+      if (response.success) {
+        // Refresh transfers from API
+        await refreshTransfers();
+        
+        // Reset form and close
+        setFormData({
+          type: 'deposit',
+          amount: '',
+          notes: '',
+          date: new Date().toISOString().split('T')[0]
+        });
+        setFormErrors({});
+        setIsFormOpen(false);
+      } else {
+        // Handle API error
+        console.error('Failed to create transfer:', response.message);
+        alert(`Failed to create transfer: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('Error creating transfer:', error);
+      alert('Failed to create transfer. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setIsFormOpen(false);
+    setFormData({
+      type: 'deposit',
+      amount: '',
+      notes: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setFormErrors({});
+  };
+
+  const handleDeleteTransfer = async (transferId: string) => {
+    if (!confirm('Are you sure you want to delete this transfer?')) {
+      return;
+    }
+
+    try {
+      const response = await transferApi.deleteTransfer(transferId);
+      
+      if (response.success) {
+        // Refresh transfers from API
+        await refreshTransfers();
+      } else {
+        alert(`Failed to delete transfer: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting transfer:', error);
+      alert('Failed to delete transfer. Please try again.');
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'white', position: 'relative' }}>
@@ -217,7 +338,32 @@ function Transfers() {
                 </tr>
               </thead>
               <tbody>
-                {transfers.map((transfer) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} style={{ 
+                      padding: '40px', 
+                      textAlign: 'center', 
+                      color: '#6B7280',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px'
+                    }}>
+                      Loading transfers...
+                    </td>
+                  </tr>
+                ) : transfers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ 
+                      padding: '40px', 
+                      textAlign: 'center', 
+                      color: '#6B7280',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px'
+                    }}>
+                      No transfers found
+                    </td>
+                  </tr>
+                ) : (
+                  transfers.map((transfer) => (
                   <tr 
                     key={transfer.id}
                     className="table-row"
@@ -270,7 +416,7 @@ function Transfers() {
                     {/* Actions - Delete Button */}
                     <td style={{ padding: '16px', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', textAlign: 'center' }}>
                       <button 
-                        onClick={() => console.log('Delete transfer:', transfer.id)}
+                        onClick={() => handleDeleteTransfer(transfer.id)}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -285,7 +431,8 @@ function Transfers() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
 
@@ -338,7 +485,7 @@ function Transfers() {
         >
           {/* Close Button */}
           <button
-            onClick={() => setIsFormOpen(false)}
+            onClick={handleClose}
             style={{
               backgroundColor: '#2D3748',
               border: 'none',
@@ -383,21 +530,265 @@ function Transfers() {
               }}>Add Transfer</h2>
             </div>
 
-            {/* Form Content - Placeholder */}
+            {/* Form Content */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
               padding: '24px',
-              backgroundColor: '#F9FAFB',
+              backgroundColor: '#F9FAFB'
+            }}>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Transfer Type */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    Transfer Type *
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      padding: '12px 16px',
+                      border: `2px solid ${formData.type === 'deposit' ? '#10B981' : '#E5E7EB'}`,
+                      borderRadius: '8px',
+                      backgroundColor: formData.type === 'deposit' ? '#F0FDF4' : 'white',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      <input
+                        type="radio"
+                        name="type"
+                        value="deposit"
+                        checked={formData.type === 'deposit'}
+                        onChange={(e) => handleInputChange('type', e.target.value)}
+                        style={{ margin: 0 }}
+                      />
+                      <span style={{ color: formData.type === 'deposit' ? '#10B981' : '#6B7280' }}>↓ Deposit</span>
+                    </label>
+                    <label style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <p style={{
+                      gap: '8px',
+                      cursor: 'pointer',
+                      padding: '12px 16px',
+                      border: `2px solid ${formData.type === 'withdrawal' ? '#EF4444' : '#E5E7EB'}`,
+                      borderRadius: '8px',
+                      backgroundColor: formData.type === 'withdrawal' ? '#FEF2F2' : 'white',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      <input
+                        type="radio"
+                        name="type"
+                        value="withdrawal"
+                        checked={formData.type === 'withdrawal'}
+                        onChange={(e) => handleInputChange('type', e.target.value)}
+                        style={{ margin: 0 }}
+                      />
+                      <span style={{ color: formData.type === 'withdrawal' ? '#EF4444' : '#6B7280' }}>↑ Withdrawal</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => handleInputChange('amount', e.target.value)}
+                    placeholder="Enter amount"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: `2px solid ${formErrors.amount ? '#EF4444' : '#E5E7EB'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontFamily: 'Inter, sans-serif',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {formErrors.amount && (
+                    <p style={{
+                      color: '#EF4444',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      {formErrors.amount}
+                    </p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    Notes *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    placeholder="Enter notes or description"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: `2px solid ${formErrors.notes ? '#EF4444' : '#E5E7EB'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontFamily: 'Inter, sans-serif',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {formErrors.notes && (
+                    <p style={{
+                      color: '#EF4444',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      {formErrors.notes}
+                    </p>
+                  )}
+                </div>
+
+
+                {/* Date */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange('date', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: `2px solid ${formErrors.date ? '#EF4444' : '#E5E7EB'}`,
+                      borderRadius: '8px',
                 fontSize: '16px',
                 fontFamily: 'Inter, sans-serif',
-                color: '#6B7280'
-              }}>Transfer form will be implemented here</p>
+                      backgroundColor: 'white',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {formErrors.date && (
+                    <p style={{
+                      color: '#EF4444',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      {formErrors.date}
+                    </p>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  justifyContent: 'flex-end',
+                  marginTop: '24px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    style={{
+                      padding: '12px 24px',
+                      border: '2px solid #E5E7EB',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      fontFamily: 'Inter, sans-serif',
+                      backgroundColor: 'white',
+                      color: '#6B7280',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#D1D5DB';
+                      e.currentTarget.style.color = '#374151';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                      e.currentTarget.style.color = '#6B7280';
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    style={{
+                      padding: '12px 24px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      fontFamily: 'Inter, sans-serif',
+                      backgroundColor: isSubmitting ? '#9CA3AF' : '#10B981',
+                      color: 'white',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.2s ease',
+                      opacity: isSubmitting ? 0.7 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSubmitting) {
+                        e.currentTarget.style.backgroundColor = '#059669';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSubmitting) {
+                        e.currentTarget.style.backgroundColor = '#10B981';
+                      }
+                    }}
+                  >
+                    {isSubmitting ? 'Adding...' : 'Add Transfer'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

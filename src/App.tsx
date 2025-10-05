@@ -2453,18 +2453,6 @@ function App() {
 
             {/* Form Fields */}
             <div style={{ padding: '32px' }}>
-              {/* SIMPLE TEST AT TOP OF FORM */}
-              <div style={{
-                backgroundColor: '#00FF00',
-                color: 'black',
-                padding: '10px',
-                margin: '10px 0',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                textAlign: 'center'
-              }}>
-                ✅ FORM IS LOADING - Strategy: "{formData.strategy}"
-              </div>
               
               <div style={{ display: 'grid', gap: '24px' }}>
                 

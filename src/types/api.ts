@@ -170,3 +170,60 @@ export interface TradeFilters {
   lossOnly?: boolean;
 }
 
+// Transfer Types
+export interface Transfer {
+  id: string;
+  date: { month: string; day: string };
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  method: string;
+  status: 'completed' | 'pending' | 'failed';
+  reference: string;
+}
+
+// Backend Transfer Response (from your API)
+export interface BackendTransfer {
+  id: number;
+  date: string;
+  type: 'DEPOSIT' | 'WITHDRAWAL';
+  amount: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Frontend Transfer Type (transformed for UI)
+export interface FrontendTransfer {
+  id: string;
+  date: { month: string; day: string };
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  method: string;
+  status: 'completed' | 'pending' | 'failed';
+  reference: string;
+}
+
+export interface CreateTransferRequest {
+  date: string;
+  type: 'DEPOSIT' | 'WITHDRAWAL';
+  amount: string;
+  notes: string;
+}
+
+export interface UpdateTransferRequest extends Partial<CreateTransferRequest> {
+  id: string;
+}
+
+// Backend API Response with summary
+export interface BackendTransfersResponse {
+  success: boolean;
+  data: {
+    summary: {
+      totalCapital: string;
+      totalDeposits: string;
+      totalWithdrawals: string;
+    };
+    transfers: BackendTransfer[];
+  };
+}
+

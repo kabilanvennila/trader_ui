@@ -350,7 +350,7 @@ function App() {
       console.log('📤 Sending close trade data to backend:', closeData);
       
       // Only use local server
-      const response = await fetch(`http://127.0.0.1:8000/api/trades/${selectedTradeToClose.id}/`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://trader-em8b.onrender.com/api'}/trades/${selectedTradeToClose.id}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

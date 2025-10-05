@@ -168,9 +168,9 @@ class ApiClient {
 // Create API client instance
 const apiClient = new ApiClient(API_BASE_URL);
 
-// Using local server only
-const LOCAL_API_URL = 'http://127.0.0.1:8000/api/trades/';
-const LOCAL_TRANSFERS_API_URL = 'http://127.0.0.1:8000/api/transfers/';
+// API URLs using config
+const TRADES_API_URL = `${API_BASE_URL}/trades/`;
+const TRANSFERS_API_URL = `${API_BASE_URL}/transfers/`;
 
 // Transfer Data Transform Functions
 const transformBackendTransfers = (backendTransfers: BackendTransfer[]): FrontendTransfer[] => {
@@ -205,12 +205,12 @@ export const tradeApi = {
     _filters?: TradeFilters, 
     _pagination?: PaginationParams
   ): Promise<ApiResponse<PaginatedResponse<Trade>>> => {
-    console.log('🔗 Using Local API for getTrades');
+    console.log('🔗 Using API for getTrades');
     
     try {
-      console.log('📡 Fetching from local server:', LOCAL_API_URL);
+      console.log('📡 Fetching from server:', TRADES_API_URL);
       
-      const response = await fetch(LOCAL_API_URL, {
+      const response = await fetch(TRADES_API_URL, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -280,7 +280,7 @@ export const tradeApi = {
       return {
         success: false,
         data: emptyResponse,
-        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },
@@ -292,16 +292,16 @@ export const tradeApi = {
 
   // Create a new trade
   createTrade: async (tradeData: CreateTradeRequest): Promise<ApiResponse<Trade>> => {
-    console.log('🔗 Using Local API for createTrade');
+    console.log('🔗 Using API for createTrade');
     
     try {
-      console.log('📡 Creating trade at local server:', LOCAL_API_URL);
+      console.log('📡 Creating trade at server:', TRADES_API_URL);
       
       // Transform frontend data to backend format
       const backendData = transformToBackendTrade(tradeData);
       console.log('📤 Sending trade data:', backendData);
       
-      const response = await fetch(LOCAL_API_URL, {
+      const response = await fetch(TRADES_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ export const tradeApi = {
       return {
         success: false,
         data: null as any,
-        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },
@@ -459,12 +459,12 @@ export const userApi = {
 export const transferApi = {
   // Get all transfers
   getTransfers: async (): Promise<ApiResponse<FrontendTransfer[]>> => {
-    console.log('🔗 Using Local API for getTransfers');
+    console.log('🔗 Using API for getTransfers');
     
     try {
-      console.log('📡 Fetching transfers from local server:', LOCAL_TRANSFERS_API_URL);
+      console.log('📡 Fetching transfers from server:', TRANSFERS_API_URL);
       
-      const response = await fetch(LOCAL_TRANSFERS_API_URL, {
+      const response = await fetch(TRANSFERS_API_URL, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -500,23 +500,23 @@ export const transferApi = {
       return {
         success: false,
         data: [],
-        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },
 
   // Create a new transfer
   createTransfer: async (transferData: CreateTransferRequest): Promise<ApiResponse<FrontendTransfer>> => {
-    console.log('🔗 Using Local API for createTransfer');
+    console.log('🔗 Using API for createTransfer');
     
     try {
-      console.log('📡 Creating transfer at local server:', LOCAL_TRANSFERS_API_URL);
+      console.log('📡 Creating transfer at server:', TRANSFERS_API_URL);
       
       // Transform frontend data to backend format
       const backendData = transformToBackendTransfer(transferData);
       console.log('📤 Sending transfer data:', backendData);
       
-      const response = await fetch(LOCAL_TRANSFERS_API_URL, {
+      const response = await fetch(TRANSFERS_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -567,18 +567,18 @@ export const transferApi = {
       return {
         success: false,
         data: null as any,
-        message: error instanceof Error ? error.message : 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: error instanceof Error ? error.message : 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },
 
   // Update an existing transfer
   updateTransfer: async (id: string, transferData: Partial<UpdateTransferRequest>): Promise<ApiResponse<FrontendTransfer>> => {
-    console.log('🔗 Using Local API for updateTransfer');
+    console.log('🔗 Using API for updateTransfer');
     
     try {
-      const url = `${LOCAL_TRANSFERS_API_URL}${id}/`;
-      console.log('📡 Updating transfer at local server:', url);
+      const url = `${TRANSFERS_API_URL}${id}/`;
+      console.log('📡 Updating transfer at server:', url);
       
       const response = await fetch(url, {
         method: 'PUT',
@@ -606,18 +606,18 @@ export const transferApi = {
       return {
         success: false,
         data: null as any,
-        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },
 
   // Delete a transfer
   deleteTransfer: async (id: string): Promise<ApiResponse<void>> => {
-    console.log('🔗 Using Local API for deleteTransfer');
+    console.log('🔗 Using API for deleteTransfer');
     
     try {
-      const url = `${LOCAL_TRANSFERS_API_URL}${id}/`;
-      console.log('📡 Deleting transfer at local server:', url);
+      const url = `${TRANSFERS_API_URL}${id}/`;
+      console.log('📡 Deleting transfer at server:', url);
       
       const response = await fetch(url, {
         method: 'DELETE',
@@ -641,7 +641,7 @@ export const transferApi = {
       return {
         success: false,
         data: undefined,
-        message: 'Unable to connect to local server at 127.0.0.1:8000. Please check if your backend is running.'
+        message: 'Unable to connect to server. Please check if your backend is running.'
       };
     }
   },

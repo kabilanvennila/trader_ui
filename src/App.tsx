@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Trade } from './types/api';
 import { tradeApi } from './services/api';
 
@@ -510,12 +511,16 @@ function App() {
                 fontWeight: '400',
                 fontSize: '16px'
               }}>Analyse</button>
-              <button style={{
+              <Link to="/transfers" style={{
                 color: '#8E9FB2',
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: '400',
-                fontSize: '16px'
-              }}>Transfers</button>
+                fontSize: '16px',
+                textDecoration: 'none',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer'
+              }}>Transfers</Link>
               <button style={{
                 color: '#8E9FB2',
                 fontFamily: 'Inter, sans-serif',

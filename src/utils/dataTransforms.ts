@@ -149,9 +149,40 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     console.log('💸 Calculated max loss from strikes:', calculatedMaxLoss, 'for', backendTrade.indices_stock);
   }
   
-  // Calculate current P&L (placeholder - this would come from real-time data)
-  const currentPnL = 0; // You'll need to implement this based on your business logic
+  // Calculate current P&L - use actual_pnl from backend if trade is closed, otherwise 0
+  console.log('🔍 Debug P&L calculation for trade:', backendTrade.id, {
+    status: backendTrade.status,
+    actual_pnl: backendTrade.actual_pnl,
+    actual_pnl_type: typeof backendTrade.actual_pnl,
+    isClosed: backendTrade.status === 'CLOSED',
+    hasActualPnL: !!backendTrade.actual_pnl,
+    allFields: Object.keys(backendTrade)
+  });
+  
+  // Check for alternative field names that might contain P&L data
+  const alternativePnLFields = ['profit_loss', 'pnl', 'profit', 'loss', 'actual_pnl'];
+  let actualPnLValue = backendTrade.actual_pnl;
+  
+  for (const field of alternativePnLFields) {
+    if ((backendTrade as any)[field] !== undefined) {
+      console.log(`🔍 Found alternative P&L field "${field}":`, (backendTrade as any)[field]);
+      actualPnLValue = (backendTrade as any)[field];
+      break;
+    }
+  }
+  
+  const currentPnL = backendTrade.status === 'CLOSED' && actualPnLValue 
+    ? parseFloat(actualPnLValue.toString()) 
+    : 0;
   const currentPnLPercentage = capitalNum > 0 ? ((currentPnL / capitalNum) * 100).toFixed(1) : '0.0';
+  
+  console.log('🔍 Calculated P&L:', {
+    currentPnL,
+    currentPnLPercentage,
+    capitalNum,
+    actualPnLValue,
+    finalValue: currentPnL
+  });
   
   // Calculate max profit/loss percentages
   const maxProfitPercentage = capitalNum > 0 ? ((maxProfitNum / capitalNum) * 100).toFixed(1) : '0.0';
@@ -178,7 +209,7 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
       type: 'Lots' 
     },
     profitLoss: { 
-      value: currentPnL >= 0 ? `+${formatCurrency(currentPnL.toString())}` : `-${formatCurrency(Math.abs(currentPnL).toString())}`,
+      value: currentPnL >= 0 ? `+₹${formatCurrency(currentPnL.toString())}` : `-₹${formatCurrency(Math.abs(currentPnL).toString())}`,
       percentage: `${currentPnL >= 0 ? '+' : ''}${currentPnLPercentage}%`,
       isProfit: currentPnL >= 0
     },
@@ -201,6 +232,8 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     },
     status: backendTrade.status.toLowerCase() as 'active' | 'closed',
     notes: backendTrade.notes || undefined,
+    actualPnL: backendTrade.actual_pnl ? parseFloat(backendTrade.actual_pnl) : undefined,
+    closingDate: backendTrade.closing_date || undefined,
     createdAt: backendTrade.created_at,
     updatedAt: backendTrade.updated_at,
     strikes: transformedStrikes,

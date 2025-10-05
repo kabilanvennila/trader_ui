@@ -23,7 +23,7 @@ function Transfers() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get transfers from context
-  const { transfers, setTransfers, refreshTransfers, loading } = useAppContext();
+  const { transfers, refreshTransfers, loading } = useAppContext();
 
   // Calculate totals
   const totalDeposits = transfers.filter(t => t.type === 'deposit').reduce((sum, t) => sum + t.amount, 0);

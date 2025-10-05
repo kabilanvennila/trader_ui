@@ -118,11 +118,6 @@ function App() {
   const [formData, setFormData] = useState({
     setup: '',
     strategy: '',
-    daysToExpiry: 'This Week',
-    mainLots: 100,
-    pricePerUnit: 100,
-    hedgeLots: 100,
-    pricePerHedgeUnit: 100,
     capital: 100,
   });
 
@@ -142,7 +137,6 @@ function App() {
   // Additional form states
   const [setupDropdownOpen, setSetupDropdownOpen] = useState(false);
   const [strategyDropdownOpen, setStrategyDropdownOpen] = useState(false);
-  const [daysDropdownOpen, setDaysDropdownOpen] = useState(false);
   
   // Close Trade form data
   const [closeTradeData, setCloseTradeData] = useState({
@@ -150,6 +144,17 @@ function App() {
     closingDate: new Date().toISOString().split('T')[0],
     notes: '',
   });
+
+  // Update close trade data when a trade is selected
+  useEffect(() => {
+    if (selectedTradeToClose) {
+      setCloseTradeData({
+        actualPnL: selectedTradeToClose.actualPnL || 0,
+        closingDate: selectedTradeToClose.closingDate || new Date().toISOString().split('T')[0],
+        notes: selectedTradeToClose.notes || '',
+      });
+    }
+  }, [selectedTradeToClose]);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -168,14 +173,11 @@ function App() {
         setStrategyDropdownOpen(false);
       }
       
-      if (daysDropdownOpen && !target.closest('[data-dropdown="days"]')) {
-        setDaysDropdownOpen(false);
-      }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isIndicesDropdownOpen, setupDropdownOpen, strategyDropdownOpen, daysDropdownOpen]);
+  }, [isIndicesDropdownOpen, setupDropdownOpen, strategyDropdownOpen]);
   
   // Handle instrument search
   useEffect(() => {
@@ -197,6 +199,16 @@ function App() {
     } else {
       return trade.status === 'closed';
     }
+  });
+  
+  // Debug closed trades
+  console.log('🔍 Debug closed trades:', {
+    activeTab,
+    totalTrades: trades.length,
+    filteredTrades: filteredTrades.length,
+    closedTrades: trades.filter(t => t.status === 'closed'),
+    closedTradesWithPnL: trades.filter(t => t.status === 'closed' && t.actualPnL !== undefined),
+    allTradeStatuses: trades.map(t => ({ id: t.id, status: t.status, actualPnL: t.actualPnL }))
   });
   
   // Calculate metrics from filtered trade data (based on active tab)
@@ -265,11 +277,11 @@ function App() {
       bias: selectedBias as 'bullish' | 'bearish' | 'neutral',
       setup: formData.setup || 'NA',
       strategy: formData.strategy || 'NA',
-      daysToExpiry: formData.daysToExpiry || new Date().toISOString().split('T')[0],
-      mainLots: formData.mainLots,
-      pricePerUnit: formData.pricePerUnit,
-      hedgeLots: formData.hedgeLots,
-      pricePerHedgeUnit: formData.pricePerHedgeUnit,
+      daysToExpiry: new Date().toISOString().split('T')[0], // Default to today's date
+      mainLots: 0, // Default value since field was removed
+      pricePerUnit: 0, // Default value since field was removed
+      hedgeLots: 0, // Default value since field was removed
+      pricePerHedgeUnit: 0, // Default value since field was removed
       maxProfit: 0, // Default values since we removed these fields from the form
       maxLoss: 0,
       capital: formData.capital,
@@ -296,11 +308,6 @@ function App() {
       setFormData({
         setup: '',
         strategy: '',
-        daysToExpiry: 'This Week',
-        mainLots: 100,
-        pricePerUnit: 100,
-        hedgeLots: 100,
-        pricePerHedgeUnit: 100,
         capital: 100,
       });
       setStrikeData({
@@ -379,7 +386,8 @@ function App() {
       });
       
       // Refetch trades to update the list
-      refetchTrades();
+      console.log('🔄 Refetching trades after closing trade');
+      await refetchTrades();
       
       alert('Trade closed successfully!');
     } catch (error) {
@@ -1951,307 +1959,7 @@ function App() {
                   </>
                 )}
 
-                {/* Days To Expiry */}
-                <div 
-                  data-dropdown="days"
-                  style={{ 
-                    backgroundColor: 'white',
-                    minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0 20px',
-                    transition: 'background-color 0.2s ease',
-                    cursor: 'pointer',
-                    position: 'relative'
-                  }}
-                  onClick={() => setDaysDropdownOpen(!daysDropdownOpen)}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
-                    Days To Expiry . <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <button type="button" style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    fontFamily: 'Inter, sans-serif',
-                    color: '#000',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    {formData.daysToExpiry}
-                    <span style={{ fontSize: '12px' }}>▼</span>
-                  </button>
-                  
-                  {/* Days to Expiry Dropdown */}
-                  {daysDropdownOpen && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: '20px',
-                      width: '150px',
-                      backgroundColor: 'white',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      zIndex: 10000,
-                      overflow: 'hidden',
-                      marginTop: '4px'
-                    }}>
-                      {['This Week', 'Next Week', '2 Weeks', '1 Month', '2 Months', '3 Months'].map((days) => (
-                        <div
-                          key={days}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFormData(prev => ({ ...prev, daysToExpiry: days }));
-                            setDaysDropdownOpen(false);
-                          }}
-                          style={{
-                            padding: '12px 16px',
-                            fontSize: '14px',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#1F2937',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                        >
-                          {days}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
-                {/* Main Lots */}
-                <div 
-                  style={{ 
-                    backgroundColor: 'white',
-                    minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'stretch',
-                    padding: '0',
-                    transition: 'background-color 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                  onClick={(e) => {
-                    const input = e.currentTarget.querySelector('input');
-                    if (input) input.focus();
-                  }}
-                >
-                  <label style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '400', 
-                    fontFamily: 'Inter, sans-serif', 
-                    color: '#9CA3AF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingLeft: '20px',
-                    width: '50%',
-                    backgroundColor: 'transparent',
-                    cursor: 'pointer'
-                  }}>
-                    Main Lots . <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.mainLots}
-                    onChange={(e) => setFormData(prev => ({ ...prev, mainLots: parseInt(e.target.value) || 0 }))}
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#000',
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
-                      width: '50%',
-                      padding: '0 20px',
-                      cursor: 'text'
-                    }}
-                    onFocus={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = '#EFF6FF';
-                    }}
-                    onBlur={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = 'white';
-                    }}
-                  />
-                </div>
-
-                {/* Price Per Unit */}
-                <div 
-                  style={{ 
-                    backgroundColor: 'white',
-                    minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'stretch',
-                    padding: '0',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  <label style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '400', 
-                    fontFamily: 'Inter, sans-serif', 
-                    color: '#9CA3AF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingLeft: '20px',
-                    width: '50%',
-                    backgroundColor: 'transparent'
-                  }}>
-                    Price Per Unit . <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricePerUnit}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerUnit: parseFloat(e.target.value) || 0 }))}
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#000',
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
-                      width: '50%',
-                      padding: '0 20px'
-                    }}
-                    onFocus={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = '#EFF6FF';
-                    }}
-                    onBlur={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = 'white';
-                    }}
-                  />
-                </div>
-
-                {/* Hedge Lots */}
-                <div 
-                  style={{ 
-                    backgroundColor: 'white',
-                    minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'stretch',
-                    padding: '0',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  <label style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '400', 
-                    fontFamily: 'Inter, sans-serif', 
-                    color: '#9CA3AF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingLeft: '20px',
-                    width: '50%',
-                    backgroundColor: 'transparent'
-                  }}>
-                    Hedge Lots
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.hedgeLots}
-                    onChange={(e) => setFormData(prev => ({ ...prev, hedgeLots: parseInt(e.target.value) || 0 }))}
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#000',
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
-                      width: '50%',
-                      padding: '0 20px'
-                    }}
-                    onFocus={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = '#EFF6FF';
-                    }}
-                    onBlur={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = 'white';
-                    }}
-                  />
-                </div>
-
-                {/* Price Per Hedge Unit */}
-                <div 
-                  style={{ 
-                    backgroundColor: 'white',
-                    minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'stretch',
-                    padding: '0',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  <label style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '400', 
-                    fontFamily: 'Inter, sans-serif', 
-                    color: '#9CA3AF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingLeft: '20px',
-                    width: '50%',
-                    backgroundColor: 'transparent'
-                  }}>
-                    Price Per Hedge Unit
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricePerHedgeUnit}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pricePerHedgeUnit: parseFloat(e.target.value) || 0 }))}
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#000',
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
-                      width: '50%',
-                      padding: '0 20px'
-                    }}
-                    onFocus={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = '#EFF6FF';
-                    }}
-                    onBlur={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = 'white';
-                    }}
-                  />
-                </div>
 
 
                 {/* Capital */}

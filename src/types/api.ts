@@ -34,6 +34,8 @@ export interface BackendTrade {
   capital: string;
   notes: string | null;
   status: 'ACTIVE' | 'CLOSED';
+  actual_pnl?: string | null; // Actual P&L when trade is closed
+  closing_date?: string | null; // Closing date when trade is closed
   created_at: string;
   updated_at: string;
   strikes: Strike[];
@@ -75,6 +77,8 @@ export interface Trade {
   risk: { value: string; label: string };
   status: 'active' | 'closed';
   notes?: string;
+  actualPnL?: number; // Actual P&L when trade is closed
+  closingDate?: string; // Closing date when trade is closed
   createdAt?: string;
   updatedAt?: string;
   strikes?: any[]; // Frontend strikes with BUY/SELL positions

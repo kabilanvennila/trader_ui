@@ -9,7 +9,6 @@ import {
   PaginatedResponse,
   TradeFilters,
   PaginationParams,
-  Transfer,
   BackendTransfer,
   FrontendTransfer,
   CreateTransferRequest,
@@ -242,6 +241,10 @@ export const tradeApi = {
       }
       
       console.log('📦 Parsed backend trades:', backendTrades);
+      
+      // Debug: Check if any trades have actual_pnl
+      const tradesWithActualPnL = backendTrades.filter(trade => trade.actual_pnl);
+      console.log('🔍 Trades with actual_pnl:', tradesWithActualPnL);
       
       // Transform backend data to frontend format
       const transformedTrades = transformBackendTrades(backendTrades);

@@ -110,6 +110,10 @@ function App() {
   const [isCloseTradeOpen, setIsCloseTradeOpen] = useState(false);
   const [selectedTradeToClose, setSelectedTradeToClose] = useState<Trade | null>(null);
   
+  // State for Modify Trade form
+  const [isModifyTradeOpen, setIsModifyTradeOpen] = useState(false);
+  const [selectedTradeToModify, setSelectedTradeToModify] = useState<Trade | null>(null);
+  
   // State for form dropdowns and inputs
   const [isIndicesDropdownOpen, setIsIndicesDropdownOpen] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState('');
@@ -233,6 +237,177 @@ function App() {
     setIsCloseTradeOpen(true);
     setOpenMenuId(null); // Close the dropdown menu
   };
+
+  const handleModifyTrade = (trade: Trade) => {
+    setSelectedTradeToModify(trade);
+    // Pre-populate form with existing trade data
+    setSelectedIndices(trade.instrument.name);
+    setSelectedBias(trade.bias);
+    setFormData({
+      setup: trade.setup.name,
+      strategy: trade.setup.type,
+      capital: parseFloat(trade.capital.value.replace(/,/g, '')) || 100,
+    });
+    setIsModifyTradeOpen(true);
+    setOpenMenuId(null); // Close the dropdown menu
+  };
+
+  const handleDeleteTrade = async (trade: Trade) => {
+    if (window.confirm(`Are you sure you want to delete trade ${trade.id}?`)) {
+      try {
+        console.log('🗑️ Deleting trade:', trade.id);
+        console.log('🔍 Trade object:', trade);
+        console.log('🔍 Trade ID type:', typeof trade.id);
+        console.log('🔍 Trade ID value:', JSON.stringify(trade.id));
+        
+        // Check if trade.id is a valid format
+        if (!trade.id || typeof trade.id !== 'string') {
+          throw new Error(`Invalid trade ID: ${trade.id}`);
+        }
+        
+        // Clean the ID to ensure it's a valid string
+        const cleanId = trade.id.toString().trim();
+        console.log('🔍 Cleaned ID:', cleanId);
+        
+        // First test if the backend is reachable
+        console.log('🔍 Testing backend connectivity...');
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://trader-em8b.onrender.com/api';
+        console.log('🔍 Base URL:', baseUrl);
+        
+        try {
+          const testResponse = await fetch(`${baseUrl}/trades/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          console.log('🔍 Backend connectivity test status:', testResponse.status);
+          console.log('🔍 Backend connectivity test ok:', testResponse.ok);
+        } catch (testError) {
+          console.error('❌ Backend connectivity test failed:', testError);
+        }
+        
+        // Now try direct fetch for delete
+        console.log('🔍 Trying direct fetch for delete...');
+        const directUrl = `${baseUrl}/trades/${cleanId}/`;
+        console.log('🔍 Direct URL:', directUrl);
+        
+        try {
+          const directResponse = await fetch(directUrl, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          console.log('🔍 Direct fetch response status:', directResponse.status);
+          console.log('🔍 Direct fetch response ok:', directResponse.ok);
+          
+          if (directResponse.ok) {
+            console.log('✅ Direct fetch succeeded');
+            await refetchTrades();
+            setOpenMenuId(null);
+            alert('Trade deleted successfully!');
+            return;
+          } else {
+            const errorText = await directResponse.text();
+            console.error('❌ Direct fetch failed:', errorText);
+            throw new Error(`Direct fetch failed: ${directResponse.status} - ${errorText}`);
+          }
+        } catch (directError) {
+          console.error('❌ Direct fetch error:', directError);
+          console.log('🔄 Falling back to tradeApi service...');
+        }
+        
+        // Use the tradeApi service as fallback
+        const response = await tradeApi.deleteTrade(cleanId);
+        console.log('🔍 Delete response:', response);
+        
+        if (!response.success) {
+          throw new Error(response.message || 'Delete failed');
+        }
+        
+        console.log('✅ Trade deleted successfully');
+        await refetchTrades();
+        setOpenMenuId(null); // Close the dropdown menu
+        alert('Trade deleted successfully!');
+      } catch (error) {
+        console.error('❌ Failed to delete trade:', error);
+        console.error('❌ Error details:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          tradeId: trade.id,
+          tradeIdType: typeof trade.id
+        });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        alert(`Failed to delete trade: ${errorMessage}`);
+      }
+    }
+  };
+  
+  // Handle modify trade submission
+  const handleModifyTradeSubmit = async () => {
+    if (!selectedTradeToModify || !selectedIndices || !selectedBias) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Create data in the format expected by UpdateTradeRequest
+    const updateRequestData = {
+      instrument: selectedIndices,
+      instrumentType: 'index' as const,
+      bias: selectedBias as 'bullish' | 'bearish' | 'neutral',
+      setup: formData.setup || 'NA',
+      strategy: formData.strategy || 'NA',
+      daysToExpiry: new Date().toISOString().split('T')[0],
+      mainLots: 0,
+      pricePerUnit: 0,
+      hedgeLots: 0,
+      pricePerHedgeUnit: 0,
+      maxProfit: 0,
+      maxLoss: 0,
+      capital: formData.capital,
+    };
+
+    try {
+      console.log('📤 Updating trade:', selectedTradeToModify.id, updateRequestData);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://trader-em8b.onrender.com/api'}/trades/${selectedTradeToModify.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateRequestData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      console.log('✅ Trade updated successfully');
+      
+      // Reset form and close
+      setIsModifyTradeOpen(false);
+      setSelectedTradeToModify(null);
+      setSelectedIndices('');
+      setSelectedBias('');
+      setFormData({
+        setup: '',
+        strategy: '',
+        capital: 100,
+      });
+      
+      // Refetch trades to update the list
+      await refetchTrades();
+      
+      alert('Trade updated successfully!');
+    } catch (error) {
+      console.error('❌ Failed to update trade:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to update trade: ${errorMessage}`);
+    }
+  };
   
   // Handle form submission
   const handleCreateTrade = async () => {
@@ -346,8 +521,9 @@ function App() {
     });
 
     // Create close trade data in your backend format
+    // Store actual P&L in max_profit field as requested
     const closeData = {
-      actual_pnl: closeTradeData.actualPnL.toString(),
+      max_profit: closeTradeData.actualPnL.toString(),
       closing_date: closeTradeData.closingDate,
       notes: closeTradeData.notes,
       status: 'CLOSED'
@@ -1068,8 +1244,22 @@ function App() {
                         zIndex: 1000,
                         minWidth: '140px'
                       }}>
-                        <div style={{ padding: '12px 16px', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1E3F66', borderBottom: '1px solid #F3F4F6' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>Modify</div>
-                        <div style={{ padding: '12px 16px', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1E3F66', borderBottom: '1px solid #F3F4F6' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>Delete</div>
+                        <div 
+                          style={{ padding: '12px 16px', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1E3F66', borderBottom: '1px solid #F3F4F6' }} 
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} 
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                          onClick={() => handleModifyTrade(trade)}
+                        >
+                          Modify
+                        </div>
+                        <div 
+                          style={{ padding: '12px 16px', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1E3F66', borderBottom: '1px solid #F3F4F6' }} 
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} 
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                          onClick={() => handleDeleteTrade(trade)}
+                        >
+                          Delete
+                        </div>
                         <div style={{ padding: '12px 16px', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1E3F66' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>Analyse</div>
                       </div>
                     )}
@@ -2347,6 +2537,302 @@ function App() {
                 }}
               >
                 CLOSE TRADE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modify Trade Form - Full Screen */}
+      {isModifyTradeOpen && selectedTradeToModify && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <div 
+            style={{ 
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              width: '90%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}
+          >
+            {/* Header */}
+            <div style={{ 
+              padding: '24px 32px', 
+              borderBottom: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ 
+                fontSize: '24px', 
+                fontWeight: '600', 
+                color: '#1F2937', 
+                margin: 0,
+                fontFamily: 'Inter, sans-serif'
+              }}>
+                Modify Trade
+              </h2>
+              <button
+                onClick={() => setIsModifyTradeOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6B7280',
+                  padding: '4px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Trade Info */}
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid #E5E7EB', backgroundColor: '#F9FAFB' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Trade ID</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937', fontFamily: 'Inter, sans-serif' }}>
+                    {selectedTradeToModify.id}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Current Status</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937', fontFamily: 'Inter, sans-serif', textTransform: 'capitalize' }}>
+                    {selectedTradeToModify.status}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Created</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937', fontFamily: 'Inter, sans-serif' }}>
+                    {selectedTradeToModify.date.month} {selectedTradeToModify.date.day}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div style={{ padding: '24px 32px' }}>
+              {/* Instrument */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Instrument . <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={selectedIndices}
+                  onChange={(e) => setSelectedIndices(e.target.value)}
+                  placeholder="Enter instrument name"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'white',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Bias */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Bias . <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <select
+                  value={selectedBias}
+                  onChange={(e) => setSelectedBias(e.target.value as 'bullish' | 'bearish' | 'neutral' | '')}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'white',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">Select bias</option>
+                  <option value="bullish">Bullish</option>
+                  <option value="bearish">Bearish</option>
+                  <option value="neutral">Neutral</option>
+                </select>
+              </div>
+
+              {/* Setup */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Setup
+                </label>
+                <input
+                  type="text"
+                  value={formData.setup}
+                  onChange={(e) => setFormData(prev => ({ ...prev, setup: e.target.value }))}
+                  placeholder="Enter setup"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'white',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Strategy */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Strategy
+                </label>
+                <input
+                  type="text"
+                  value={formData.strategy}
+                  onChange={(e) => setFormData(prev => ({ ...prev, strategy: e.target.value }))}
+                  placeholder="Enter strategy"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'white',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Capital */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Capital
+                </label>
+                <input
+                  type="number"
+                  value={formData.capital}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capital: parseInt(e.target.value) || 0 }))}
+                  placeholder="Enter capital amount"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'white',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '24px 32px', 
+              borderTop: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '16px'
+            }}>
+              <button
+                onClick={() => setIsModifyTradeOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#6B7280',
+                  backgroundColor: 'white',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleModifyTradeSubmit}
+                disabled={!selectedIndices || !selectedBias}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'Inter, sans-serif',
+                  color: 'white',
+                  backgroundColor: (!selectedIndices || !selectedBias) ? '#9CA3AF' : '#3B82F6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: (!selectedIndices || !selectedBias) ? 'not-allowed' : 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                UPDATE TRADE
               </button>
             </div>
           </div>

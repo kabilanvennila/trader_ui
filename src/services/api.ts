@@ -366,7 +366,60 @@ export const tradeApi = {
 
   // Delete a trade
   deleteTrade: async (id: string): Promise<ApiResponse<void>> => {
-    return apiClient.delete<void>(`/trades/${id}`);
+    console.log('🗑️ API: Deleting trade with ID:', id);
+    console.log('🗑️ API: ID type:', typeof id);
+    console.log('🗑️ API: ID length:', id.length);
+    console.log('🗑️ API: ID contains only digits:', /^\d+$/.test(id));
+    
+    // Validate ID format - should be numeric string or handle other formats
+    if (!id || id.trim() === '') {
+      console.error('❌ API: Empty trade ID');
+      throw new Error('Trade ID cannot be empty');
+    }
+    
+    // Check if ID is numeric (most common case)
+    const isNumeric = /^\d+$/.test(id);
+    console.log('🗑️ API: ID validation - isNumeric:', isNumeric);
+    
+    if (!isNumeric) {
+      console.warn('⚠️ API: Non-numeric trade ID detected:', id);
+      // Don't throw error, just log warning and proceed
+    }
+    
+    // Try different endpoint formats to see which one works
+    const endpoints = [
+      `/trades/${id}/`,
+      `/trades/${id}`,
+      `/trade/${id}/`,
+      `/trade/${id}`,
+      `/api/trades/${id}/`,
+      `/api/trade/${id}/`
+    ];
+    
+    console.log('🗑️ API: Trying endpoints:', endpoints);
+    
+    // Try the first endpoint format
+    const endpoint = `/trades/${id}/`;
+    console.log('🗑️ API: Using endpoint:', endpoint);
+    console.log('🗑️ API: Full URL will be:', `${API_BASE_URL}${endpoint}`);
+    
+    try {
+      const result = await apiClient.delete<void>(endpoint);
+      console.log('🗑️ API: Delete result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API: First endpoint failed:', error);
+      
+      // If first endpoint fails, try without trailing slash
+      console.log('🔄 API: Trying without trailing slash...');
+      const endpointNoSlash = `/trades/${id}`;
+      console.log('🗑️ API: Using endpoint:', endpointNoSlash);
+      console.log('🗑️ API: Full URL will be:', `${API_BASE_URL}${endpointNoSlash}`);
+      
+      const result = await apiClient.delete<void>(endpointNoSlash);
+      console.log('🗑️ API: Delete result:', result);
+      return result;
+    }
   },
 
   // Get dashboard metrics

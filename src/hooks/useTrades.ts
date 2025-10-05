@@ -184,9 +184,19 @@ export function useCalculatedMetrics(trades: Trade[]) {
     
     // Calculate total P&L
     const totalPnL = trades.reduce((sum, trade) => {
-      const value = parseFloat(trade.profitLoss.value.replace(/[+,]/g, ''));
+      // Handle the new format with ₹ symbol and + sign
+      const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+      const value = parseFloat(cleanValue) || 0;
+      console.log('🔍 Dashboard P&L calculation:', {
+        original: trade.profitLoss.value,
+        cleaned: cleanValue,
+        parsed: value,
+        isProfit: trade.profitLoss.isProfit
+      });
       return sum + value;
     }, 0);
+    
+    console.log('🔍 Dashboard total P&L:', totalPnL);
     
     // Calculate total deployed capital
     const totalCapital = trades.reduce((sum, trade) => {
@@ -222,7 +232,7 @@ export function useCalculatedMetrics(trades: Trade[]) {
     return {
       totalTrades,
       totalPnL,
-      totalPnLFormatted: Math.abs(totalPnL).toLocaleString('en-IN'),
+      totalPnLFormatted: totalPnL.toLocaleString('en-IN'), // Keep the sign
       percentageReturn: percentageReturn >= 0 ? `+${percentageReturn.toFixed(1)}` : percentageReturn.toFixed(1),
       totalMaxProfit: totalMaxProfit.toLocaleString('en-IN'),
       totalMaxLoss: totalMaxLoss.toLocaleString('en-IN'),

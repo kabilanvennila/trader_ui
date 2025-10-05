@@ -159,15 +159,22 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     allFields: Object.keys(backendTrade)
   });
   
-  // Check for alternative field names that might contain P&L data
-  const alternativePnLFields = ['profit_loss', 'pnl', 'profit', 'loss', 'actual_pnl'];
+  // Check for P&L data in max_profit field for closed trades
+  const alternativePnLFields = ['max_profit', 'profit_loss', 'pnl', 'profit', 'loss', 'actual_pnl'];
   let actualPnLValue = backendTrade.actual_pnl;
   
-  for (const field of alternativePnLFields) {
-    if ((backendTrade as any)[field] !== undefined) {
-      console.log(`🔍 Found alternative P&L field "${field}":`, (backendTrade as any)[field]);
-      actualPnLValue = (backendTrade as any)[field];
-      break;
+  // For closed trades, check max_profit first as it contains the actual P&L
+  if (backendTrade.status === 'CLOSED' && backendTrade.max_profit) {
+    console.log(`🔍 Found actual P&L in max_profit field:`, backendTrade.max_profit);
+    actualPnLValue = backendTrade.max_profit;
+  } else {
+    // For other cases, check alternative fields
+    for (const field of alternativePnLFields) {
+      if ((backendTrade as any)[field] !== undefined) {
+        console.log(`🔍 Found alternative P&L field "${field}":`, (backendTrade as any)[field]);
+        actualPnLValue = (backendTrade as any)[field];
+        break;
+      }
     }
   }
   
@@ -192,6 +199,8 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
   const totalRange = maxProfitNum + maxLossNum;
   const maxProfitLossRatio = totalRange > 0 ? maxProfitNum / totalRange : 0.5;
 
+  console.log('🔍 Transform: Backend trade ID:', backendTrade.id, 'type:', typeof backendTrade.id);
+  
   return {
     id: backendTrade.id.toString(),
     date: { month, day },
@@ -232,7 +241,9 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     },
     status: backendTrade.status.toLowerCase() as 'active' | 'closed',
     notes: backendTrade.notes || undefined,
-    actualPnL: backendTrade.actual_pnl ? parseFloat(backendTrade.actual_pnl) : undefined,
+    actualPnL: backendTrade.status === 'CLOSED' && backendTrade.max_profit 
+      ? parseFloat(backendTrade.max_profit) 
+      : (backendTrade.actual_pnl ? parseFloat(backendTrade.actual_pnl) : undefined),
     closingDate: backendTrade.closing_date || undefined,
     createdAt: backendTrade.created_at,
     updatedAt: backendTrade.updated_at,

@@ -209,15 +209,33 @@ export function useCalculatedMetrics(trades: Trade[]) {
     
     // Calculate total max profit
     const totalMaxProfit = trades.reduce((sum, trade) => {
-      const value = parseFloat(trade.maxProfit.value.replace(/,/g, ''));
+      // Handle currency formatting and symbols
+      const cleanValue = trade.maxProfit.value.replace(/[₹,]/g, '');
+      const value = parseFloat(cleanValue) || 0;
+      console.log('🔍 Dashboard Max Profit calculation:', {
+        original: trade.maxProfit.value,
+        cleaned: cleanValue,
+        parsed: value
+      });
       return sum + value;
     }, 0);
     
+    console.log('🔍 Dashboard total Max Profit:', totalMaxProfit);
+    
     // Calculate total max loss
     const totalMaxLoss = trades.reduce((sum, trade) => {
-      const value = parseFloat(trade.maxLoss.value.replace(/,/g, ''));
+      // Handle currency formatting and symbols
+      const cleanValue = trade.maxLoss.value.replace(/[₹,]/g, '');
+      const value = parseFloat(cleanValue) || 0;
+      console.log('🔍 Dashboard Max Loss calculation:', {
+        original: trade.maxLoss.value,
+        cleaned: cleanValue,
+        parsed: value
+      });
       return sum + value;
     }, 0);
+    
+    console.log('🔍 Dashboard total Max Loss:', totalMaxLoss);
     
     // Calculate total risk
     const totalRisk = trades.reduce((sum, trade) => {

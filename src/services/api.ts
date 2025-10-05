@@ -15,8 +15,8 @@ import {
   UpdateTransferRequest,
   BackendTransfersResponse
 } from '../types/api';
+import { transformToBackendTrade, transformBackendTrades } from '../utils/dataTransforms';
 import { config } from '../config';
-import { transformBackendTrades, transformToBackendTrade } from '../utils/dataTransforms';
 import type { BackendTrade } from '../types/api';
 
 // API Configuration from environment
@@ -361,7 +361,58 @@ export const tradeApi = {
 
   // Update an existing trade
   updateTrade: async (id: string, tradeData: Partial<UpdateTradeRequest>): Promise<ApiResponse<Trade>> => {
-    return apiClient.put<Trade>(`/trades/${id}`, tradeData);
+    console.log('🔗 Using API for updateTrade');
+    console.log('🔗 Update trade data:', tradeData);
+    console.log('🔗 Trade ID:', id);
+    console.log('🔗 API_BASE_URL:', API_BASE_URL);
+    console.log('🔗 Full Update URL will be:', `${API_BASE_URL}/trades/${id}/`);
+    
+    try {
+      // Transform frontend data to backend format
+      const transformedData = transformToBackendTrade(tradeData);
+      console.log('🔗 Transformed data for update:', transformedData);
+      
+      const response = await fetch(`${API_BASE_URL}/trades/${id}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transformedData),
+      });
+
+      console.log('🔗 Update response status:', response.status);
+      console.log('🔗 Update response headers:', response.headers);
+      console.log('🔗 Full response URL:', response.url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Update trade failed:', response.status, errorText);
+        console.error('❌ Request URL:', `${API_BASE_URL}/trades/${id}/`);
+        console.error('❌ Request data:', transformedData);
+        console.error('❌ Request headers:', {
+          'Content-Type': 'application/json',
+        });
+        throw new Error(`Update failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Update trade successful:', result);
+
+      return {
+        success: true,
+        data: result,
+        message: 'Trade updated successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to update trade at local server:', error);
+      
+      // Return error response instead of throwing to prevent app crash
+      return {
+        success: false,
+        data: null as any,
+        message: 'Unable to connect to server. Please check if your backend is running.'
+      };
+    }
   },
 
   // Delete a trade

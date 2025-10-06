@@ -5,6 +5,7 @@ import type { Transfer } from '../types/api';
 interface AppContextType {
   transfers: Transfer[];
   setTransfers: (transfers: Transfer[]) => void;
+  totalCapital: number;
   loading: boolean;
   error: string | null;
   refreshTransfers: () => Promise<void>;
@@ -14,6 +15,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [totalCapital, setTotalCapital] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +29,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       if (response.success) {
         setTransfers(response.data);
+        // Calculate total capital from transfers
+        const deposits = response.data.filter(t => t.type === 'deposit').reduce((sum, t) => sum + t.amount, 0);
+        const withdrawals = response.data.filter(t => t.type === 'withdrawal').reduce((sum, t) => sum + t.amount, 0);
+        setTotalCapital(deposits - withdrawals);
       } else {
         setError(response.message || 'Failed to fetch transfers');
         // Keep existing transfers if API fails
@@ -54,6 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{ 
       transfers, 
       setTransfers, 
+      totalCapital,
       loading, 
       error, 
       refreshTransfers 

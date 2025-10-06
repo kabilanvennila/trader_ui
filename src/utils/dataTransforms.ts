@@ -54,6 +54,25 @@ function calculateLotsFromStrikes(strikes: any[], fallbackLots: number): string 
   return firstLot.toString();
 }
 
+// Calculate quantity from lots and multiplier
+function calculateQuantityFromLots(strikes: any[], fallbackLots: number, instrument: string): string {
+  const lots = parseInt(calculateLotsFromStrikes(strikes, fallbackLots));
+  
+  const getMultiplier = (instrument: string): number => {
+    const upperInstrument = instrument.toUpperCase();
+    if (upperInstrument.includes('NIFTY')) return 75;
+    if (upperInstrument.includes('BANKNIFTY')) return 30;
+    if (upperInstrument.includes('FINNIFTY')) return 40;
+    if (upperInstrument.includes('SENSEX')) return 10;
+    return 1;
+  };
+  
+  const multiplier = getMultiplier(instrument);
+  const quantity = lots * multiplier;
+  
+  return `${quantity} Qty`;
+}
+
 function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strategy?: string): number {
   console.log('🔍 calculateMaxLossFromStrikes called with:', { strikes, instrument, strategy });
   
@@ -322,12 +341,12 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     },
     bias,
     setup: { 
-      name: backendTrade.setup || 'Default Setup', 
-      type: 'Strategy' 
+      name: backendTrade.strategy || 'Strategy', 
+      type: backendTrade.setup || 'Setup' 
     },
     lots: { 
       value: calculateLotsFromStrikes(transformedStrikes, backendTrade.main_lots), 
-      type: 'Lots' 
+      type: calculateQuantityFromLots(transformedStrikes, backendTrade.main_lots, backendTrade.indices_stock)
     },
     profitLoss: { 
       value: currentPnL >= 0 ? `+₹${formatCurrency(currentPnL.toString())}` : `-₹${formatCurrency(Math.abs(currentPnL).toString())}`,

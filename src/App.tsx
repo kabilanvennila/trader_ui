@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trade } from './types/api';
 import { tradeApi } from './services/api';
+import { useAppContext } from './context/AppContext';
 
 // Reusable Styles
 const styles = {
@@ -68,6 +69,9 @@ import { useInstrumentManager } from './hooks/useMarket';
 
 function App() {
   
+  // Get total capital from context
+  const { totalCapital } = useAppContext();
+  
   // API hooks for data fetching
   const { trades, loading: tradesLoading, error: tradesError, refetch: refetchTrades } = useTrades();
   
@@ -76,7 +80,8 @@ function App() {
     trades, 
     tradesLength: trades.length, 
     tradesLoading, 
-    tradesError 
+    tradesError,
+    totalCapital
   });
   const { 
     indices, 
@@ -105,6 +110,7 @@ function App() {
   
   // State for Add New Trade form
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // State for Close Trade form
   const [isCloseTradeOpen, setIsCloseTradeOpen] = useState(false);
@@ -113,29 +119,41 @@ function App() {
   // State for Modify Trade form
   const [isModifyTradeOpen, setIsModifyTradeOpen] = useState(false);
   const [selectedTradeToModify, setSelectedTradeToModify] = useState<Trade | null>(null);
+  const [showModifySuccess, setShowModifySuccess] = useState(false);
   
   // State for form dropdowns and inputs
   const [isIndicesDropdownOpen, setIsIndicesDropdownOpen] = useState(false);
+  const [isIndicesHovered, setIsIndicesHovered] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState('');
   const [indicesSearchQuery, setIndicesSearchQuery] = useState('');
   const [selectedBias, setSelectedBias] = useState<'bullish' | 'bearish' | 'neutral' | ''>('');
   const [formData, setFormData] = useState({
     setup: '',
     strategy: '',
-    capital: 100,
+    capital: '' as string | number,
+  });
+  
+  // Error state for field validation
+  const [fieldErrors, setFieldErrors] = useState({
+    indices: false,
+    bias: false,
+    setup: false,
+    strategy: false,
+    capital: false,
+    strikeDetails: false
   });
 
   // Strike data state
   const [strikeData, setStrikeData] = useState({
-    buyStrike: 0,
-    sellStrike: 0,
+    buyStrike: '' as string | number,
+    sellStrike: '' as string | number,
     buyOptionType: 'PE' as 'CE' | 'PE',
     sellOptionType: 'PE' as 'CE' | 'PE',
-    buyLots: 0,
-    sellLots: 0,
+    buyLots: '' as string | number,
+    sellLots: '' as string | number,
     expiryDate: new Date().toISOString().split('T')[0],
-    buyLtp: 0,
-    sellLtp: 0
+    buyLtp: '' as string | number,
+    sellLtp: '' as string | number
   });
   
   // Additional form states
@@ -246,7 +264,7 @@ function App() {
     setFormData({
       setup: trade.setup.name,
       strategy: trade.setup.type,
-      capital: parseFloat(trade.capital.value.replace(/,/g, '')) || 100,
+      capital: parseFloat(trade.capital.value.replace(/,/g, '')) || 0,
     });
     
     // Pre-populate strike data if available
@@ -276,9 +294,33 @@ function App() {
   const handleModifyTradeSubmit = async () => {
     if (!selectedTradeToModify) return;
     
+    // Validate required fields
     if (!selectedIndices || !selectedBias) {
-      alert('Please fill in all required fields');
+      alert('Please fill in all required fields: Indices and Bias');
       return;
+    }
+
+    if (!formData.setup || !formData.strategy) {
+      alert('Please fill in all required fields: Setup and Strategy');
+      return;
+    }
+
+    if (!formData.capital || formData.capital === '') {
+      alert('Please enter Capital amount');
+      return;
+    }
+
+    // Validate strike data if strategy requires it
+    if (shouldShowStrikes()) {
+      if (!strikeData.buyStrike || strikeData.buyStrike === '' ||
+          !strikeData.sellStrike || strikeData.sellStrike === '' ||
+          !strikeData.buyLots || strikeData.buyLots === '' ||
+          !strikeData.sellLots || strikeData.sellLots === '' ||
+          !strikeData.buyLtp || strikeData.buyLtp === '' ||
+          !strikeData.sellLtp || strikeData.sellLtp === '') {
+        alert('Please fill in all Strike Details fields');
+        return;
+      }
     }
 
     try {
@@ -287,20 +329,20 @@ function App() {
       if (shouldShowStrikes()) {
         strikes = [
           {
-            strike_price: strikeData.buyStrike,
+            strike_price: typeof strikeData.buyStrike === 'string' ? parseFloat(strikeData.buyStrike) || 0 : strikeData.buyStrike,
             option_type: strikeData.buyOptionType,
             position: 'BUY',
-            lots: strikeData.buyLots,
+            lots: typeof strikeData.buyLots === 'string' ? parseInt(strikeData.buyLots) || 0 : strikeData.buyLots,
             expiry_date: strikeData.expiryDate,
-            ltp: strikeData.buyLtp
+            ltp: typeof strikeData.buyLtp === 'string' ? parseFloat(strikeData.buyLtp) || 0 : strikeData.buyLtp
           },
           {
-            strike_price: strikeData.sellStrike,
+            strike_price: typeof strikeData.sellStrike === 'string' ? parseFloat(strikeData.sellStrike) || 0 : strikeData.sellStrike,
             option_type: strikeData.sellOptionType,
             position: 'SELL',
-            lots: strikeData.sellLots,
+            lots: typeof strikeData.sellLots === 'string' ? parseInt(strikeData.sellLots) || 0 : strikeData.sellLots,
             expiry_date: strikeData.expiryDate,
-            ltp: strikeData.sellLtp
+            ltp: typeof strikeData.sellLtp === 'string' ? parseFloat(strikeData.sellLtp) || 0 : strikeData.sellLtp
           }
         ];
       }
@@ -319,7 +361,7 @@ function App() {
         pricePerHedgeUnit: 0,
         maxProfit: 0, // Will be calculated by backend
         maxLoss: 0, // Will be calculated by backend
-        capital: formData.capital,
+        capital: typeof formData.capital === 'string' ? parseFloat(formData.capital) || 0 : formData.capital,
         strikes: strikes
       };
 
@@ -335,28 +377,39 @@ function App() {
       
       if (response.success) {
         console.log('Trade updated successfully:', response.data);
-        // Reset form
-        setSelectedIndices('');
-        setSelectedBias('');
-        setFormData({
-          setup: '',
-          strategy: '',
-          capital: 100,
-        });
-        setStrikeData({
-          buyStrike: 0,
-          sellStrike: 0,
-          buyOptionType: 'PE',
-          sellOptionType: 'PE',
-          buyLots: 0,
-          sellLots: 0,
-          expiryDate: new Date().toISOString().split('T')[0],
-          buyLtp: 0,
-          sellLtp: 0
-        });
-        setIsModifyTradeOpen(false);
-        setSelectedTradeToModify(null);
+        
+        // Show success state
+        setShowModifySuccess(true);
+        
+        // Refetch trades to update the list
         refetchTrades();
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+          setShowModifySuccess(false);
+          setIsModifyTradeOpen(false);
+          setSelectedTradeToModify(null);
+          
+          // Reset form
+          setSelectedIndices('');
+          setSelectedBias('');
+          setFormData({
+            setup: '',
+            strategy: '',
+            capital: '',
+          });
+          setStrikeData({
+            buyStrike: '',
+            sellStrike: '',
+            buyOptionType: 'PE',
+            sellOptionType: 'PE',
+            buyLots: '',
+            sellLots: '',
+            expiryDate: new Date().toISOString().split('T')[0],
+            buyLtp: '',
+            sellLtp: ''
+          });
+        }, 2000);
       } else {
         console.error('Failed to update trade:', response.message);
         alert(`Failed to update trade: ${response.message}`);
@@ -464,8 +517,40 @@ function App() {
   
   // Handle form submission
   const handleCreateTrade = async () => {
-    if (!selectedIndices || !selectedBias) {
-      alert('Please fill in all required fields');
+    // Reset errors
+    const errors = {
+      indices: false,
+      bias: false,
+      setup: false,
+      strategy: false,
+      capital: false,
+      strikeDetails: false
+    };
+
+    // Validate required fields
+    if (!selectedIndices) errors.indices = true;
+    if (!selectedBias) errors.bias = true;
+    if (!formData.setup) errors.setup = true;
+    if (!formData.strategy) errors.strategy = true;
+    if (!formData.capital || formData.capital === '') errors.capital = true;
+
+    // Validate strike data if strategy requires it
+    if (shouldShowStrikes()) {
+      if (!strikeData.buyStrike || strikeData.buyStrike === '' ||
+          !strikeData.sellStrike || strikeData.sellStrike === '' ||
+          !strikeData.buyLots || strikeData.buyLots === '' ||
+          !strikeData.sellLots || strikeData.sellLots === '' ||
+          !strikeData.buyLtp || strikeData.buyLtp === '' ||
+          !strikeData.sellLtp || strikeData.sellLtp === '') {
+        errors.strikeDetails = true;
+      }
+    }
+
+    // Update error state
+    setFieldErrors(errors);
+
+    // If there are any errors, don't submit
+    if (Object.values(errors).some(error => error)) {
       return;
     }
 
@@ -480,20 +565,20 @@ function App() {
     if (shouldShowStrikes()) {
       strikes = [
         {
-          strike_price: strikeData.buyStrike,
+          strike_price: typeof strikeData.buyStrike === 'string' ? parseFloat(strikeData.buyStrike) || 0 : strikeData.buyStrike,
           option_type: strikeData.buyOptionType,
           position: 'BUY',
-          lots: strikeData.buyLots,
+          lots: typeof strikeData.buyLots === 'string' ? parseInt(strikeData.buyLots) || 0 : strikeData.buyLots,
           expiry_date: strikeData.expiryDate,
-          ltp: strikeData.buyLtp
+          ltp: typeof strikeData.buyLtp === 'string' ? parseFloat(strikeData.buyLtp) || 0 : strikeData.buyLtp
         },
         {
-          strike_price: strikeData.sellStrike,
+          strike_price: typeof strikeData.sellStrike === 'string' ? parseFloat(strikeData.sellStrike) || 0 : strikeData.sellStrike,
           option_type: strikeData.sellOptionType,
           position: 'SELL',
-          lots: strikeData.sellLots,
+          lots: typeof strikeData.sellLots === 'string' ? parseInt(strikeData.sellLots) || 0 : strikeData.sellLots,
           expiry_date: strikeData.expiryDate,
-          ltp: strikeData.sellLtp
+          ltp: typeof strikeData.sellLtp === 'string' ? parseFloat(strikeData.sellLtp) || 0 : strikeData.sellLtp
         }
       ];
     }
@@ -512,7 +597,7 @@ function App() {
       pricePerHedgeUnit: 0, // Default value since field was removed
       maxProfit: 0, // Default values since we removed these fields from the form
       maxLoss: 0,
-      capital: formData.capital,
+      capital: typeof formData.capital === 'string' ? parseFloat(formData.capital) || 0 : formData.capital,
       strikes: strikes
     };
 
@@ -529,31 +614,37 @@ function App() {
 
       console.log('✅ Trade created successfully:', response.data);
 
-      // Reset form and close
-      setIsFormOpen(false);
-      setSelectedIndices('');
-      setSelectedBias('');
-      setFormData({
-        setup: '',
-        strategy: '',
-        capital: 100,
-      });
-      setStrikeData({
-        buyStrike: 0,
-        sellStrike: 0,
-        buyOptionType: 'PE' as 'CE' | 'PE',
-        sellOptionType: 'PE' as 'CE' | 'PE',
-        buyLots: 0,
-        sellLots: 0,
-        expiryDate: new Date().toISOString().split('T')[0],
-        buyLtp: 0,
-        sellLtp: 0
-      });
+      // Show success state
+      setShowSuccess(true);
       
       // Refetch trades to update the list
       refetchTrades();
       
-      alert('Trade created successfully!');
+      // Auto-close after 2 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsFormOpen(false);
+        
+        // Reset form
+        setSelectedIndices('');
+        setSelectedBias('');
+        setFormData({
+          setup: '',
+          strategy: '',
+          capital: '',
+        });
+        setStrikeData({
+          buyStrike: '',
+          sellStrike: '',
+          buyOptionType: 'PE' as 'CE' | 'PE',
+          sellOptionType: 'PE' as 'CE' | 'PE',
+          buyLots: '',
+          sellLots: '',
+          expiryDate: new Date().toISOString().split('T')[0],
+          buyLtp: '',
+          sellLtp: ''
+        });
+      }, 2000);
     } catch (error) {
       console.error('❌ Failed to create trade:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -776,6 +867,119 @@ function App() {
 
         {/* Main Content Area */}
         <main style={{ marginTop: '80px' }}>
+          {/* Trades Tabs */}
+          {!tradesLoading && !tradesError && (
+            <div style={{ 
+              marginBottom: '40px',
+              borderTop: '1px dashed #DEE2E8',
+              borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
+              borderRight: '1px solid rgba(217, 217, 217, 0.5)',
+              display: 'flex',
+              backgroundColor: '#F9FAFB'
+            }}>
+              <div style={{ display: 'flex', gap: '0', width: '50%' }}>
+                <button
+                  onClick={() => setActiveTab('active')}
+                  style={{
+                    flex: 1,
+                    padding: '16px 24px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Inter, sans-serif',
+                    color: activeTab === 'active' ? '#1E3F66' : '#6B7280',
+                    backgroundColor: activeTab === 'active' ? 'white' : '#F9FAFB',
+                    border: 'none',
+                    borderRight: activeTab === 'active' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
+                    borderBottom: activeTab === 'active' ? 'none' : '1px dashed #DEE2E8',
+                    cursor: 'pointer',
+                    textTransform: 'none',
+                    letterSpacing: '0px',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'active') {
+                      e.currentTarget.style.color = '#374151';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'active') {
+                      e.currentTarget.style.color = '#6B7280';
+                    }
+                  }}
+                >
+                  Active Trades
+                  <span style={{
+                    marginLeft: '8px',
+                    backgroundColor: activeTab === 'active' ? '#02D196' : '#9CA3AF',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    padding: '4px 8px',
+                    borderRadius: '100px',
+                    minWidth: '32px',
+                    textAlign: 'center',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {trades.filter(t => t.status === 'active').length}
+                  </span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab('closed')}
+                  style={{
+                    flex: 1,
+                    padding: '16px 24px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Inter, sans-serif',
+                    color: activeTab === 'closed' ? '#1E3F66' : '#6B7280',
+                    backgroundColor: activeTab === 'closed' ? 'white' : '#F9FAFB',
+                    border: 'none',
+                    borderLeft: activeTab === 'closed' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
+                    borderRight: activeTab === 'closed' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
+                    borderBottom: activeTab === 'closed' ? 'none' : '1px dashed #DEE2E8',
+                    cursor: 'pointer',
+                    textTransform: 'none',
+                    letterSpacing: '0px',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'closed') {
+                      e.currentTarget.style.color = '#374151';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'closed') {
+                      e.currentTarget.style.color = '#6B7280';
+                    }
+                  }}
+                >
+                  Closed Trades
+                  <span style={{
+                    marginLeft: '8px',
+                    backgroundColor: activeTab === 'closed' ? '#02D196' : '#9CA3AF',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    padding: '4px 8px',
+                    borderRadius: '100px',
+                    minWidth: '32px',
+                    textAlign: 'center',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {trades.filter(t => t.status === 'closed').length}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Running Trades Section */}
           <section style={{
             borderTop: '1px dashed #DEE2E8',
@@ -859,19 +1063,28 @@ function App() {
                 <div style={{ flex: 1, backgroundColor: 'white', boxSizing: 'border-box' }}>
                   <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
                     
-                    {/* Row 1: Deployed */}
+                    {/* Row 1: Total Capital */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={styles.section4Label}>Total Capital</div>
+                      <div style={styles.mainNumberSmall}>{totalCapital.toLocaleString('en-IN')}</div>
+                    </div>
+                    
+                    {/* Dotted Divider */}
+                    <div style={{ borderBottom: '1px dotted #D1D5DB', margin: '16px 0' }}></div>
+                    
+                    {/* Row 2: Deployed */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={styles.section4Label}>Deployed</div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                         <span style={styles.mainNumberSmall}>{metrics.totalCapital}</span>
-                        <span style={{ ...styles.percentage, color: '#6B7280' }}>({((parseFloat(metrics.totalCapital.replace(/,/g, '')) / 1600000) * 100).toFixed(1)}%)</span>
+                        <span style={{ ...styles.percentage, color: '#6B7280' }}>({totalCapital > 0 ? ((parseFloat(metrics.totalCapital.replace(/,/g, '')) / totalCapital) * 100).toFixed(1) : '0.0'}%)</span>
                       </div>
                     </div>
                     
                     {/* Dotted Divider */}
                     <div style={{ borderBottom: '1px dotted #D1D5DB', margin: '16px 0' }}></div>
                     
-                    {/* Row 2: @ Risk */}
+                    {/* Row 3: @ Risk */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={styles.section4Label}>@ Risk</div>
                       <div style={styles.mainNumberSmall}>{metrics.totalRisk}%</div>
@@ -880,22 +1093,13 @@ function App() {
                     {/* Dotted Divider */}
                     <div style={{ borderBottom: '1px dotted #D1D5DB', margin: '16px 0' }}></div>
                     
-                    {/* Row 3: Buying Power */}
+                    {/* Row 4: Buying Power */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={styles.section4Label}>Buying Power</div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                         <span style={styles.mainNumberSmall}>{metrics.buyingPowerUsed}</span>
                         <span style={{ ...styles.percentage, color: '#6B7280' }}>({metrics.buyingPowerPercentage}%)</span>
                       </div>
-                    </div>
-                    
-                    {/* Dotted Divider */}
-                    <div style={{ borderBottom: '1px dotted #D1D5DB', margin: '16px 0' }}></div>
-                    
-                    {/* Row 4: Total Capital */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={styles.section4Label}>Total Capital</div>
-                      <div style={styles.mainNumberSmall}>10,00,000</div>
                     </div>
                     
                   </div>
@@ -977,106 +1181,6 @@ function App() {
               </div>
             )}
 
-            {/* Trades Tabs - only show when not loading and no error */}
-            {!tradesLoading && !tradesError && (
-              <div style={{ 
-                marginBottom: '24px',
-                borderBottom: '1px solid #E5E7EB'
-              }}>
-                <div style={{ display: 'flex', gap: '0' }}>
-                  <button
-                    onClick={() => setActiveTab('active')}
-                    style={{
-                      padding: '16px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: activeTab === 'active' ? '#1E3F66' : '#6B7280',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderBottom: activeTab === 'active' ? '3px solid #1E3F66' : '3px solid transparent',
-                      cursor: 'pointer',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      transition: 'all 0.2s ease',
-                      position: 'relative'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (activeTab !== 'active') {
-                        e.currentTarget.style.color = '#374151';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeTab !== 'active') {
-                        e.currentTarget.style.color = '#6B7280';
-                      }
-                    }}
-                  >
-                    Active Trades
-                    <span style={{
-                      marginLeft: '8px',
-                      backgroundColor: activeTab === 'active' ? '#1E3F66' : '#9CA3AF',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      minWidth: '20px',
-                      textAlign: 'center',
-                      display: 'inline-block'
-                    }}>
-                      {trades.filter(t => t.status === 'active').length}
-                    </span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setActiveTab('closed')}
-                    style={{
-                      padding: '16px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: activeTab === 'closed' ? '#1E3F66' : '#6B7280',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderBottom: activeTab === 'closed' ? '3px solid #1E3F66' : '3px solid transparent',
-                      cursor: 'pointer',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      transition: 'all 0.2s ease',
-                      position: 'relative'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (activeTab !== 'closed') {
-                        e.currentTarget.style.color = '#374151';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeTab !== 'closed') {
-                        e.currentTarget.style.color = '#6B7280';
-                      }
-                    }}
-                  >
-                    Closed Trades
-                    <span style={{
-                      marginLeft: '8px',
-                      backgroundColor: activeTab === 'closed' ? '#1E3F66' : '#9CA3AF',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      minWidth: '20px',
-                      textAlign: 'center',
-                      display: 'inline-block'
-                    }}>
-                      {trades.filter(t => t.status === 'closed').length}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Table - only show when not loading and no error */}
             {!tradesLoading && !tradesError && (
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
@@ -1088,7 +1192,7 @@ function App() {
                 <col style={{ width: 'calc(100% / 16 * 1)' }} /> {/* 7. Lots */}
                 <col style={{ width: 'calc(100% / 16 * 2)' }} /> {/* 8-9. Profit/Loss */}
                 {activeTab === 'active' && <col style={{ width: 'calc(100% / 16 * 4)' }} />} {/* 10-13. Max Profit & Max Loss combined */}
-                {activeTab === 'closed' && <col style={{ width: 'calc(100% / 16 * 2)' }} />} {/* Notes */}
+                {activeTab === 'closed' && <col style={{ width: 'calc(100% / 16 * 4)' }} />} {/* Notes */}
                 <col style={{ width: 'calc(100% / 16 * 1)' }} /> {/* 14. Capital */}
                 <col style={{ width: 'calc(100% / 16 * 1)' }} /> {/* 15. @Risk */}
                 <col style={{ width: 'calc(100% / 16 * 1)' }} /> {/* 16. Action + More combined */}
@@ -1110,7 +1214,12 @@ function App() {
                   </th>
                   )}
                   {activeTab === 'closed' && (
-                    <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Notes</th>
+                    <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Max Profit</span>
+                        <span>Max Loss</span>
+                      </div>
+                    </th>
                   )}
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Capital</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>@Risk</th>
@@ -1143,8 +1252,8 @@ function App() {
                     </div>
                   </td>
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={styles.textPrimary}>{trade.setup.name}</div>
-                    <div style={styles.textSecondary}>{trade.setup.type}</div>
+                    <div style={styles.textPrimary}>{trade.setup.type}</div>
+                    <div style={styles.textSecondary}>{trade.setup.name}</div>
                   </td>
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={styles.textPrimary}>{trade.lots.value}</div>
@@ -1240,47 +1349,145 @@ function App() {
                   )}
                   {activeTab === 'closed' && (
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: '#6B7280', 
-                        fontFamily: 'Inter, sans-serif',
-                        maxWidth: '200px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {trade.notes && trade.notes !== '0' ? trade.notes : 'No notes'}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ flex: '0 0 auto' }}>
+                          {trade.calculatedMaxProfit ? (
+                            <>
+                              <div style={styles.textPrimary}>
+                                ₹{trade.calculatedMaxProfit.value}
+                              </div>
+                              <div style={styles.textSecondary}>
+                                {(() => {
+                                  const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                                  const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
+                                  const percentage = capital > 0 ? ((calculatedProfit / capital) * 100).toFixed(1) : '0.0';
+                                  return `${percentage}%`;
+                                })()}
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{ ...styles.textSecondary, fontSize: '12px', color: '#9CA3AF' }}>
+                              No strike data
+                            </div>
+                          )}
                       </div>
+                      <div style={{ flex: '1 1 auto', position: 'relative' }}>
+                        <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                            {(() => {
+                              if (trade.calculatedMaxProfit && trade.calculatedMaxLoss) {
+                                const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                                const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                                const totalRange = calculatedProfit + calculatedLoss;
+                                const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
+                                return (
+                                  <>
+                                    <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
+                                    <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                  </>
+                                );
+                              } else if (trade.calculatedMaxProfit) {
+                                const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                                const maxLoss = parseFloat(trade.maxLoss.value.replace(/,/g, ''));
+                                const totalRange = calculatedProfit + maxLoss;
+                                const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
+                                return (
+                                  <>
+                                    <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
+                                    <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                  </>
+                                );
+                              } else {
+                                // Show empty bar when no strike data
+                                return (
+                                  <div style={{ width: '100%', backgroundColor: '#E5E7EB' }}></div>
+                                );
+                              }
+                            })()}
+                        </div>
+                        {/* Slider position based on actual P&L */}
+                        <div style={{ 
+                          position: 'absolute', 
+                          left: (() => {
+                            // Calculate slider position based on actual P&L
+                            if (trade.calculatedMaxProfit && trade.calculatedMaxLoss) {
+                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                              const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                              const actualPnL = parseFloat(trade.profitLoss.value.replace(/[₹,+]/g, ''));
+                              const totalRange = calculatedProfit + calculatedLoss;
+                              
+                              // Position slider based on where actual P&L falls
+                              // If actualPnL = maxProfit, position at 100% profit side (left)
+                              // If actualPnL = -maxLoss, position at 0% (right)
+                              const position = totalRange > 0 ? ((actualPnL + calculatedLoss) / totalRange) * 100 : 50;
+                              return `${Math.max(0, Math.min(100, position))}%`;
+                            }
+                            return '50%';
+                          })(), 
+                          top: '50%', 
+                          transform: 'translate(-50%, -50%)', 
+                          width: '3px', 
+                          height: '14px', 
+                          backgroundColor: '#1E3F66', 
+                          borderRadius: '2px' 
+                        }}></div>
+                      </div>
+                      <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+                          {trade.calculatedMaxLoss ? (
+                            <>
+                              <div style={styles.textPrimary}>
+                                ₹{trade.calculatedMaxLoss.value}
+                              </div>
+                              <div style={styles.textSecondary}>
+                                {(() => {
+                                  const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                                  const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
+                                  const percentage = capital > 0 ? ((calculatedLoss / capital) * 100).toFixed(1) : '0.0';
+                                  return `${percentage}%`;
+                                })()}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div style={styles.textPrimary}>{trade.maxLoss.value}</div>
+                              <div style={styles.textSecondary}>{trade.maxLoss.percentage}</div>
+                            </>
+                          )}
+                      </div>
+                    </div>
                   </td>
                   )}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={styles.textPrimary}>{trade.capital.value}</div>
-                    <div style={styles.textSecondary}>{trade.capital.label}</div>
+                    <div style={styles.textSecondary}>{totalCapital > 0 ? ((parseFloat(trade.capital.value.replace(/,/g, '')) / totalCapital) * 100).toFixed(1) + '%' : '0.0%'}</div>
                   </td>
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={styles.textPrimary}>{trade.risk.value}</div>
-                    <div style={styles.textSecondary}>{trade.risk.label}</div>
+                    <div style={styles.textSecondary}>{totalCapital > 0 ? ((parseFloat(trade.risk.value.replace(/%/g, '')) * parseFloat(trade.capital.value.replace(/,/g, ''))) / (totalCapital * 100)).toFixed(2) + '%' : '0.0%'}</div>
                   </td>
                   <td style={{ padding: '0', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', position: 'relative' }}>
                     <div style={{ display: 'flex', height: '100%' }}>
-                      <div 
-                        style={{ 
-                          flex: 1, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          padding: '16px', 
-                          cursor: trade.status === 'active' ? 'pointer' : 'not-allowed',
-                          opacity: trade.status === 'active' ? 1 : 0.3
-                        }}
-                        onClick={trade.status === 'active' ? () => handleOpenCloseTrade(trade) : undefined}
-                        title={trade.status === 'active' ? "Close Trade" : "Trade already closed"}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none">
-                          <path d="M5 11.001H3C2.73478 11.001 2.48043 10.8956 2.29289 10.7081C2.10536 10.5205 2 10.2662 2 10.001V3.00098C2 2.73576 2.10536 2.48141 2.29289 2.29387C2.48043 2.10633 2.73478 2.00098 3 2.00098H5M8.5 9.00098L11 6.50098M11 6.50098L8.5 4.00098M11 6.50098H5" stroke="#FF2929" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <div style={{ width: '1px', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}></div>
+                      {activeTab === 'active' && (
+                        <>
+                          <div 
+                            style={{ 
+                              flex: 1, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              padding: '16px', 
+                              cursor: trade.status === 'active' ? 'pointer' : 'not-allowed',
+                              opacity: trade.status === 'active' ? 1 : 0.3
+                            }}
+                            onClick={trade.status === 'active' ? () => handleOpenCloseTrade(trade) : undefined}
+                            title={trade.status === 'active' ? "Close Trade" : "Trade already closed"}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                              <path d="M5 11.001H3C2.73478 11.001 2.48043 10.8956 2.29289 10.7081C2.10536 10.5205 2 10.2662 2 10.001V3.00098C2 2.73576 2.10536 2.48141 2.29289 2.29387C2.48043 2.10633 2.73478 2.00098 3 2.00098H5M8.5 9.00098L11 6.50098M11 6.50098L8.5 4.00098M11 6.50098H5" stroke="#FF2929" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                          <div style={{ width: '1px', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}></div>
+                        </>
+                      )}
                       <div className="menu-trigger" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', cursor: 'pointer' }} onClick={() => toggleMenu(`row${trade.id}`)}>
                         <span style={{ fontSize: '14px', color: '#6B7280' }}>⋮</span>
                       </div>
@@ -1332,7 +1539,8 @@ function App() {
             </table>
             )}
             
-            {/* Add New Trade Button - always show */}
+            {/* Add New Trade Button - only show for active trades */}
+            {activeTab === 'active' && (
             <div style={{ borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', borderBottom: '1px solid rgba(217, 217, 217, 0.5)', display: 'flex', justifyContent: 'flex-end' }}>
               <button 
                 onClick={() => setIsFormOpen(true)}
@@ -1365,6 +1573,7 @@ function App() {
                 {tradesLoading ? 'Loading...' : 'Add New Trade'}
               </button>
             </div>
+            )}
           </section>
         </main>
       </div>
@@ -1378,53 +1587,114 @@ function App() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(249, 250, 251, 0.5)',
+            backdropFilter: 'blur(8px)',
             zIndex: 1000,
             animation: 'fadeIn 0.3s ease-in-out',
             display: 'flex',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             justifyContent: 'center',
-            paddingTop: '40px',
-            gap: '20px'
+            padding: '40px'
           }}
         >
-          {/* Close Button - Outside content */}
-          <button
-            onClick={() => setIsFormOpen(false)}
-            style={{
-              backgroundColor: '#2D3748',
-              border: 'none',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0,
-              borderRadius: '4px',
-              marginTop: '20px'
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
           {/* Form Content Container with max-width */}
           <div 
             style={{
               width: '100%',
               maxWidth: '600px',
-              height: 'calc(100vh - 80px)',
+              maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: 'white',
-              borderRadius: '12px',
-              overflow: 'hidden'
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+              position: 'relative'
             }}
           >
+            {/* Close Button - Inside popup (hide when showing success) */}
+            {!showSuccess && (
+            <button
+              onClick={() => setIsFormOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                borderRadius: '50%',
+                color: '#9CA3AF',
+                transition: 'all 0.2s',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F3F4F6';
+                e.currentTarget.style.color = '#1F2937';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#9CA3AF';
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            )}
+            {showSuccess ? (
+              // Success State
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                padding: '40px'
+              }}>
+                <div className="success-checkmark" style={{
+                  width: '100px',
+                  height: '100px',
+                  marginBottom: '24px'
+                }}>
+                  <svg viewBox="0 0 52 52" style={{ width: '100%', height: '100%' }}>
+                    <circle
+                      className="success-checkmark-circle"
+                      cx="26"
+                      cy="26"
+                      r="25"
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="2"
+                    />
+                    <path
+                      className="success-checkmark-check"
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      d="M14 27l8 8 16-16"
+                    />
+                  </svg>
+                </div>
+                <h2 style={{
+                  fontSize: '28px',
+                  fontWeight: '600',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#10B981',
+                  margin: 0,
+                  textAlign: 'center'
+                }}>Trade Added!</h2>
+              </div>
+            ) : (
+              <>
             {/* Form Header */}
             <div style={{
               padding: '24px',
@@ -1452,9 +1722,9 @@ function App() {
                 <div 
                   data-dropdown="indices"
                   style={{ 
-                    backgroundColor: 'white',
+                    backgroundColor: isIndicesHovered ? '#F9FAFB' : 'white',
                     minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
+                    borderBottom: fieldErrors.indices ? '2px solid #EF4444' : '1px solid #E5E7EB',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1467,11 +1737,11 @@ function App() {
                     e.stopPropagation();
                     setIsIndicesDropdownOpen(!isIndicesDropdownOpen);
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  onMouseEnter={() => setIsIndicesHovered(true)}
+                  onMouseLeave={() => setIsIndicesHovered(false)}
                 >
                   <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
-                    Indices / Stock . <span style={{ color: '#EF4444' }}>*</span>
+                    Indices / Stock
                   </label>
                   <button 
                     type="button" 
@@ -1493,8 +1763,10 @@ function App() {
                       gap: '8px'
                     }}
                   >
-                    {selectedIndices || 'Choose'}
-                    <span style={{ fontSize: '12px' }}>▼</span>
+                    <span style={{ color: selectedIndices ? '#000' : '#9CA3AF' }}>{selectedIndices || 'Choose'}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </button>
                   
                   {/* Dropdown Menu */}
@@ -1646,7 +1918,7 @@ function App() {
                   style={{ 
                     backgroundColor: 'white',
                     minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
+                    borderBottom: fieldErrors.bias ? '2px solid #EF4444' : '1px solid #E5E7EB',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1658,7 +1930,7 @@ function App() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 >
                   <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
-                    Bias . <span style={{ color: '#EF4444' }}>*</span>
+                    Bias
                   </label>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button 
@@ -1721,7 +1993,7 @@ function App() {
                   style={{ 
                     backgroundColor: 'white',
                     minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
+                    borderBottom: fieldErrors.setup ? '2px solid #EF4444' : '1px solid #E5E7EB',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1735,7 +2007,7 @@ function App() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 >
                   <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
-                    Setup . <span style={{ color: '#EF4444' }}>*</span>
+                    Setup
                   </label>
                   <button type="button" style={{
                     fontSize: '14px',
@@ -1749,8 +2021,10 @@ function App() {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    {formData.setup || 'Choose'}
-                    <span style={{ fontSize: '12px' }}>▼</span>
+                    <span style={{ color: formData.setup ? '#000' : '#9CA3AF' }}>{formData.setup || 'Choose'}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </button>
                   
                   {/* Setup Dropdown */}
@@ -1800,7 +2074,7 @@ function App() {
                   style={{ 
                     backgroundColor: 'white',
                     minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
+                    borderBottom: fieldErrors.strategy ? '2px solid #EF4444' : '1px solid #E5E7EB',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1814,7 +2088,7 @@ function App() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 >
                   <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
-                    Strategy . <span style={{ color: '#EF4444' }}>*</span>
+                    Strategy
                   </label>
                   <button type="button" style={{
                     fontSize: '14px',
@@ -1828,8 +2102,10 @@ function App() {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    {formData.strategy || 'Choose'}
-                    <span style={{ fontSize: '12px' }}>▼</span>
+                    <span style={{ color: formData.strategy ? '#000' : '#9CA3AF' }}>{formData.strategy || 'Choose'}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </button>
                   
                   {/* Strategy Dropdown */}
@@ -1912,121 +2188,92 @@ function App() {
                         fontWeight: '500',
                         fontFamily: 'Inter, sans-serif',
                         color: '#374151',
-                        width: '50%'
+                        width: '30%'
                       }}>
                         Buy Strike . <span style={{ color: '#EF4444' }}>*</span>
                       </label>
-                      <div style={{ display: 'flex', gap: '10px', width: '50%' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Strike</label>
-                          <input
-                            type="number"
-                            step="0.05"
-                            value={strikeData.buyStrike}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, buyStrike: parseFloat(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '80px',
-                              padding: '8px'
-                            }}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Type</label>
-                          <select
-                            value={strikeData.buyOptionType}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, buyOptionType: e.target.value as 'CE' | 'PE' }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              padding: '8px'
-                            }}
-                          >
-                            <option value="CE">CE</option>
-                            <option value="PE">PE</option>
-                          </select>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>LTP</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={strikeData.buyLtp}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: parseFloat(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '80px',
-                              padding: '8px'
-                            }}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Lots</label>
-                          <input
-                            type="number"
-                            step="1"
-                            value={strikeData.buyLots}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: parseInt(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '60px',
-                              padding: '8px'
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
+                      <div style={{ display: 'flex', gap: '6px', width: '70%' }}>
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={strikeData.buyStrike}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="Strike"
+                          style={{
+                            flex: 1.3,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
+                        <select
+                          value={strikeData.buyOptionType}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyOptionType: e.target.value as 'CE' | 'PE' }))}
+                          style={{
+                            flex: 0.7,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 6px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        >
+                          <option value="">Type</option>
+                          <option value="CE">CE</option>
+                          <option value="PE">PE</option>
+                        </select>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={strikeData.buyLtp}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="LTP"
+                          style={{
+                            flex: 1.3,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
+                        <input
+                          type="number"
+                          step="1"
+                          value={strikeData.buyLots}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                          placeholder="Lots"
+                          style={{
+                            flex: 0.9,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -2045,121 +2292,92 @@ function App() {
                         fontWeight: '500',
                         fontFamily: 'Inter, sans-serif',
                         color: '#374151',
-                        width: '50%'
+                        width: '30%'
                       }}>
                         Sell Strike . <span style={{ color: '#EF4444' }}>*</span>
                       </label>
-                      <div style={{ display: 'flex', gap: '10px', width: '50%' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Strike</label>
-                          <input
-                            type="number"
-                            step="0.05"
-                            value={strikeData.sellStrike}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, sellStrike: parseFloat(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '80px',
-                              padding: '8px'
-                            }}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Type</label>
-                          <select
-                            value={strikeData.sellOptionType}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, sellOptionType: e.target.value as 'CE' | 'PE' }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              padding: '8px'
-                            }}
-                          >
-                            <option value="CE">CE</option>
-                            <option value="PE">PE</option>
-                          </select>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>LTP</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={strikeData.sellLtp}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: parseFloat(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '80px',
-                              padding: '8px'
-                            }}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <label style={{
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            color: '#6B7280',
-                            marginBottom: '4px',
-                            textAlign: 'center'
-                          }}>Lots</label>
-                          <input
-                            type="number"
-                            step="1"
-                            value={strikeData.sellLots}
-                            onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: parseInt(e.target.value) || 0 }))}
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              fontFamily: 'Inter, sans-serif',
-                              color: '#000',
-                              background: 'transparent',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '4px',
-                              textAlign: 'center',
-                              width: '60px',
-                              padding: '8px'
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
+                      <div style={{ display: 'flex', gap: '6px', width: '70%' }}>
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={strikeData.sellStrike}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="Strike"
+                          style={{
+                            flex: 1.3,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
+                        <select
+                          value={strikeData.sellOptionType}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellOptionType: e.target.value as 'CE' | 'PE' }))}
+                          style={{
+                            flex: 0.7,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 6px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        >
+                          <option value="">Type</option>
+                          <option value="CE">CE</option>
+                          <option value="PE">PE</option>
+                        </select>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={strikeData.sellLtp}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="LTP"
+                          style={{
+                            flex: 1.3,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
+                        <input
+                          type="number"
+                          step="1"
+                          value={strikeData.sellLots}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                          placeholder="Lots"
+                          style={{
+                            flex: 0.9,
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            fontFamily: 'Inter, sans-serif',
+                            color: '#000',
+                            backgroundColor: 'white',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '8px',
+                            padding: '10px 10px',
+                            outline: 'none',
+                            minWidth: 0
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -2178,7 +2396,7 @@ function App() {
                         fontWeight: '500',
                         fontFamily: 'Inter, sans-serif',
                         color: '#374151',
-                        width: '50%'
+                        width: '30%'
                       }}>
                         Expiry Date . <span style={{ color: '#EF4444' }}>*</span>
                       </label>
@@ -2187,15 +2405,16 @@ function App() {
                         value={strikeData.expiryDate}
                         onChange={(e) => setStrikeData(prev => ({ ...prev, expiryDate: e.target.value }))}
                         style={{
+                          width: '70%',
                           fontSize: '14px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
-                          background: 'transparent',
-                          border: '1px solid #E5E7EB',
-                          borderRadius: '4px',
-                          padding: '8px',
-                          width: '50%'
+                          backgroundColor: 'white',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '8px',
+                          padding: '12px 16px',
+                          outline: 'none'
                         }}
                       />
                     </div>
@@ -2210,7 +2429,7 @@ function App() {
                   style={{ 
                     backgroundColor: 'white',
                     minHeight: '60px',
-                    borderBottom: '1px solid #E5E7EB',
+                    borderBottom: fieldErrors.capital ? '2px solid #EF4444' : '1px solid #E5E7EB',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'stretch',
@@ -2231,37 +2450,60 @@ function App() {
                     width: '50%',
                     backgroundColor: 'transparent'
                   }}>
-                    Capital . <span style={{ color: '#EF4444' }}>*</span>
+                    Capital
                   </label>
-                  <input
-                    type="number"
-                    value={formData.capital}
-                    onChange={(e) => setFormData(prev => ({ ...prev, capital: parseFloat(e.target.value) || 0 }))}
-                    style={{
+                  <div style={{
+                    width: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    paddingRight: '20px'
+                  }}>
+                    <span style={{
                       fontSize: '14px',
                       fontWeight: '600',
                       fontFamily: 'Inter, sans-serif',
-                      color: '#000',
-                      background: 'transparent',
-                      border: 'none',
-                      textAlign: 'right',
-                      width: '50%',
-                      padding: '0 20px'
-                    }}
-                    onFocus={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = '#EFF6FF';
-                    }}
-                    onBlur={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) parent.style.backgroundColor = 'white';
-                    }}
-                  />
+                      color: '#6B7280',
+                      marginRight: '2px'
+                    }}>₹</span>
+                    <input
+                      type="text"
+                      value={formData.capital === '' || formData.capital === 0 ? '' : 
+                        typeof formData.capital === 'number' ? 
+                        formData.capital.toLocaleString('en-IN') : 
+                        formData.capital}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/,/g, '');
+                        if (value === '' || !isNaN(Number(value))) {
+                          setFormData(prev => ({ ...prev, capital: value === '' ? '' : parseFloat(value) }));
+                        }
+                      }}
+                      placeholder="0"
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontFamily: 'Inter, sans-serif',
+                        color: '#000',
+                        background: 'transparent',
+                        border: 'none',
+                        textAlign: 'right',
+                        outline: 'none',
+                        width: '120px',
+                        padding: '0'
+                      }}
+                      onFocus={(e) => {
+                        const parent = e.currentTarget.parentElement?.parentElement;
+                        if (parent) parent.style.backgroundColor = '#EFF6FF';
+                      }}
+                      onBlur={(e) => {
+                        const parent = e.currentTarget.parentElement?.parentElement;
+                        if (parent) parent.style.backgroundColor = 'white';
+                      }}
+                    />
+                  </div>
                 </div>
 
-
               </form>
-
             </div>
 
             {/* Form Footer */}
@@ -2270,18 +2512,17 @@ function App() {
             }}>
               <button
                 onClick={handleCreateTrade}
-                disabled={!selectedIndices || !selectedBias}
                 style={{
                   width: '100%',
                   padding: '16px',
-                  backgroundColor: !selectedIndices || !selectedBias ? '#9CA3AF' : '#10B981',
+                  backgroundColor: '#10B981',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '700',
                   fontFamily: 'Inter, sans-serif',
                   color: 'white',
-                  cursor: !selectedIndices || !selectedBias ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}
@@ -2289,6 +2530,8 @@ function App() {
                 CREATE / SAVE
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -2605,53 +2848,114 @@ function App() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(249, 250, 251, 0.5)',
+            backdropFilter: 'blur(8px)',
             zIndex: 1000,
             animation: 'fadeIn 0.3s ease-in-out',
             display: 'flex',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             justifyContent: 'center',
-            paddingTop: '40px',
-            gap: '20px'
+            padding: '40px'
           }}
         >
-          {/* Close Button - Outside content */}
-          <button
-            onClick={() => setIsModifyTradeOpen(false)}
-            style={{
-              backgroundColor: '#2D3748',
-              border: 'none',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0,
-              borderRadius: '4px',
-              marginTop: '20px'
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
           {/* Form Content Container with max-width */}
           <div 
             style={{
               width: '100%',
               maxWidth: '600px',
-              height: 'calc(100vh - 80px)',
+              maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: 'white',
-              borderRadius: '12px',
-              overflow: 'hidden'
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+              position: 'relative'
             }}
           >
+            {/* Close Button - Inside popup (hide when showing success) */}
+            {!showModifySuccess && (
+            <button
+              onClick={() => setIsModifyTradeOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                borderRadius: '50%',
+                color: '#9CA3AF',
+                transition: 'all 0.2s',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F3F4F6';
+                e.currentTarget.style.color = '#1F2937';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#9CA3AF';
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            )}
+            {showModifySuccess ? (
+              // Success State
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                padding: '40px'
+              }}>
+                <div className="success-checkmark" style={{
+                  width: '100px',
+                  height: '100px',
+                  marginBottom: '24px'
+                }}>
+                  <svg viewBox="0 0 52 52" style={{ width: '100%', height: '100%' }}>
+                    <circle
+                      className="success-checkmark-circle"
+                      cx="26"
+                      cy="26"
+                      r="25"
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="2"
+                    />
+                    <path
+                      className="success-checkmark-check"
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      d="M14 27l8 8 16-16"
+                    />
+                  </svg>
+                </div>
+                <h2 style={{
+                  fontSize: '28px',
+                  fontWeight: '600',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#10B981',
+                  margin: 0,
+                  textAlign: 'center'
+                }}>Trade Updated!</h2>
+              </div>
+            ) : (
+              <>
             {/* Form Header */}
             <div style={{
               padding: '24px',
@@ -2678,7 +2982,7 @@ function App() {
                 <div 
                   data-dropdown="indices"
                   style={{ 
-                    backgroundColor: 'white',
+                    backgroundColor: isIndicesHovered ? '#F9FAFB' : 'white',
                     minHeight: '60px',
                     borderBottom: '1px solid #E5E7EB',
                     display: 'flex',
@@ -2693,8 +2997,8 @@ function App() {
                     e.stopPropagation();
                     setIsIndicesDropdownOpen(!isIndicesDropdownOpen);
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  onMouseEnter={() => setIsIndicesHovered(true)}
+                  onMouseLeave={() => setIsIndicesHovered(false)}
                 >
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Indices / Stock</div>
@@ -2896,8 +3200,10 @@ function App() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                  {formData.strategy || 'Choose'}
-                  <span style={{ fontSize: '12px' }}>▼</span>
+                  <span style={{ color: formData.strategy ? '#000' : '#9CA3AF' }}>{formData.strategy || 'Choose'}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 
                 {/* Strategy Dropdown */}
@@ -2956,7 +3262,7 @@ function App() {
                 <input
                   type="number"
                   value={formData.capital}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capital: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capital: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                   placeholder="Enter capital amount"
                   style={{
                     width: '100%',
@@ -3333,7 +3639,6 @@ function App() {
               </button>
               <button
                 onClick={handleModifyTradeSubmit}
-                disabled={!selectedIndices || !selectedBias}
                 style={{
                   flex: 1,
                   padding: '12px 24px',
@@ -3341,10 +3646,10 @@ function App() {
                   fontWeight: '600',
                   fontFamily: 'Inter, sans-serif',
                   color: 'white',
-                  backgroundColor: (!selectedIndices || !selectedBias) ? '#9CA3AF' : '#3B82F6',
+                  backgroundColor: '#3B82F6',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: (!selectedIndices || !selectedBias) ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}
@@ -3352,6 +3657,8 @@ function App() {
                 UPDATE TRADE
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}

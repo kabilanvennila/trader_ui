@@ -2132,9 +2132,9 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: 'white',
-              borderRadius: '16px',
+              borderRadius: '8px',
               overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
               position: 'relative'
             }}
           >
@@ -2144,8 +2144,8 @@ function App() {
               onClick={() => setIsFormOpen(false)}
               style={{
                 position: 'absolute',
-                top: '16px',
-                right: '16px',
+                top: '24px',
+                right: '24px',
                 backgroundColor: 'transparent',
                 border: 'none',
                 width: '32px',
@@ -2242,7 +2242,7 @@ function App() {
               padding: '0',
               backgroundColor: '#F9FAFB'
             }}>
-              <form style={{ display: 'flex', flexDirection: 'column', gap: '0', margin: '24px', borderRadius: '12px', overflow: 'visible' }}>
+              <form style={{ display: 'flex', flexDirection: 'column', gap: '0', margin: '0', borderRadius: '0', overflow: 'visible' }}>
                 
                 {/* Indices / Stock */}
                 <div 
@@ -2689,6 +2689,12 @@ function App() {
                       borderBottom: '1px solid #E2E8F0',
                       borderTop: '1px solid #E2E8F0'
                     }}>
+                      <div style={{
+                        width: '24px',
+                        height: '100%',
+                        borderRight: '1px solid #E5E7EB',
+                        flexShrink: 0
+                      }} />
                       <label style={{
                         fontSize: '16px',
                         fontWeight: '600',
@@ -2702,23 +2708,31 @@ function App() {
                     {/* Buy Strike */}
                     <div style={{
                       backgroundColor: 'white',
-                      minHeight: '60px',
+                      height: '60px',
                       borderBottom: '1px solid #E5E7EB',
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0 20px'
+                      alignItems: 'stretch',
+                      padding: '0'
                     }}>
+                      <div style={{
+                        width: '44px',
+                        borderRight: '1px solid #E5E7EB',
+                        flexShrink: 0
+                      }} />
                       <label style={{
                         fontSize: '14px',
-                        fontWeight: '500',
+                        fontWeight: '400',
                         fontFamily: 'Inter, sans-serif',
-                        color: '#374151',
-                        width: '30%'
+                        color: '#9CA3AF',
+                        width: 'calc(30% - 44px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '20px',
+                        flexShrink: 0
                       }}>
-                        Buy Strike . <span style={{ color: '#EF4444' }}>*</span>
+                        Buy Strike
                       </label>
-                      <div style={{ display: 'flex', gap: '6px', width: '70%' }}>
+                      <div style={{ display: 'flex', width: '70%', alignItems: 'stretch' }}>
                         <input
                           type="number"
                           step="0.05"
@@ -2726,40 +2740,69 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, buyStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                           placeholder="Strike"
                           style={{
-                            flex: 1.3,
-                            fontSize: '13px',
+                            flex: '1 1 0',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            borderLeft: '1px solid #E5E7EB',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
-                        <select
-                          value={strikeData.buyOptionType}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyOptionType: e.target.value as 'CE' | 'PE' }))}
-                          style={{
-                            flex: 0.7,
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 6px',
-                            outline: 'none',
-                            minWidth: 0
-                          }}
-                        >
-                          <option value="">Type</option>
-                          <option value="CE">CE</option>
-                          <option value="PE">PE</option>
-                        </select>
+                        {/* PE/CE Switch */}
+                        <div style={{
+                          flex: '0 0 60px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRight: '1px solid #E5E7EB',
+                          backgroundColor: 'white'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => setStrikeData(prev => ({ ...prev, buyOptionType: prev.buyOptionType === 'PE' ? 'CE' : 'PE' }))}
+                            style={{
+                              position: 'relative',
+                              width: '48px',
+                              height: '26px',
+                              backgroundColor: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981',
+                              borderRadius: '14px',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.2s',
+                              outline: 'none'
+                            }}
+                          >
+                            <span style={{
+                              position: 'absolute',
+                              top: '2px',
+                              left: strikeData.buyOptionType === 'PE' ? '2px' : '24px',
+                              width: '22px',
+                              height: '22px',
+                              backgroundColor: 'white',
+                              borderRadius: '50%',
+                              transition: 'left 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              color: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981'
+                            }}>
+                              {strikeData.buyOptionType}
+                            </span>
+                          </button>
+                        </div>
                         <input
                           type="number"
                           step="0.01"
@@ -2767,17 +2810,22 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                           placeholder="LTP"
                           style={{
-                            flex: 1.3,
-                            fontSize: '13px',
+                            flex: '1 1 0',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
                         <input
@@ -2787,17 +2835,21 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
                           placeholder="Lots"
                           style={{
-                            flex: 0.9,
-                            fontSize: '13px',
+                            flex: '0 0 80px',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
                       </div>
@@ -2806,23 +2858,31 @@ function App() {
                     {/* Sell Strike */}
                     <div style={{
                       backgroundColor: 'white',
-                      minHeight: '60px',
+                      height: '60px',
                       borderBottom: '1px solid #E5E7EB',
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0 20px'
+                      alignItems: 'stretch',
+                      padding: '0'
                     }}>
+                      <div style={{
+                        width: '44px',
+                        borderRight: '1px solid #E5E7EB',
+                        flexShrink: 0
+                      }} />
                       <label style={{
                         fontSize: '14px',
-                        fontWeight: '500',
+                        fontWeight: '400',
                         fontFamily: 'Inter, sans-serif',
-                        color: '#374151',
-                        width: '30%'
+                        color: '#9CA3AF',
+                        width: 'calc(30% - 44px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '20px',
+                        flexShrink: 0
                       }}>
-                        Sell Strike . <span style={{ color: '#EF4444' }}>*</span>
+                        Sell Strike
                       </label>
-                      <div style={{ display: 'flex', gap: '6px', width: '70%' }}>
+                      <div style={{ display: 'flex', width: '70%', alignItems: 'stretch' }}>
                         <input
                           type="number"
                           step="0.05"
@@ -2830,40 +2890,69 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, sellStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                           placeholder="Strike"
                           style={{
-                            flex: 1.3,
-                            fontSize: '13px',
+                            flex: '1 1 0',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            borderLeft: '1px solid #E5E7EB',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
-                        <select
-                          value={strikeData.sellOptionType}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellOptionType: e.target.value as 'CE' | 'PE' }))}
-                          style={{
-                            flex: 0.7,
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 6px',
-                            outline: 'none',
-                            minWidth: 0
-                          }}
-                        >
-                          <option value="">Type</option>
-                          <option value="CE">CE</option>
-                          <option value="PE">PE</option>
-                        </select>
+                        {/* PE/CE Switch */}
+                        <div style={{
+                          flex: '0 0 60px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRight: '1px solid #E5E7EB',
+                          backgroundColor: 'white'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => setStrikeData(prev => ({ ...prev, sellOptionType: prev.sellOptionType === 'PE' ? 'CE' : 'PE' }))}
+                            style={{
+                              position: 'relative',
+                              width: '48px',
+                              height: '26px',
+                              backgroundColor: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981',
+                              borderRadius: '14px',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.2s',
+                              outline: 'none'
+                            }}
+                          >
+                            <span style={{
+                              position: 'absolute',
+                              top: '2px',
+                              left: strikeData.sellOptionType === 'PE' ? '2px' : '24px',
+                              width: '22px',
+                              height: '22px',
+                              backgroundColor: 'white',
+                              borderRadius: '50%',
+                              transition: 'left 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              color: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981'
+                            }}>
+                              {strikeData.sellOptionType}
+                            </span>
+                          </button>
+                        </div>
                         <input
                           type="number"
                           step="0.01"
@@ -2871,17 +2960,22 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                           placeholder="LTP"
                           style={{
-                            flex: 1.3,
-                            fontSize: '13px',
+                            flex: '1 1 0',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
                         <input
@@ -2891,17 +2985,21 @@ function App() {
                           onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
                           placeholder="Lots"
                           style={{
-                            flex: 0.9,
-                            fontSize: '13px',
+                            flex: '0 0 80px',
+                            fontSize: '14px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '8px',
-                            padding: '10px 10px',
-                            outline: 'none',
-                            minWidth: 0
+                            border: 'none',
+                            padding: '0 16px',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
                           }}
                         />
                       </div>
@@ -2910,21 +3008,29 @@ function App() {
                     {/* Expiry Date */}
                     <div style={{
                       backgroundColor: 'white',
-                      minHeight: '60px',
+                      height: '60px',
                       borderBottom: '1px solid #E5E7EB',
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0 20px'
+                      alignItems: 'stretch',
+                      padding: '0'
                     }}>
+                      <div style={{
+                        width: '44px',
+                        borderRight: '1px solid #E5E7EB',
+                        flexShrink: 0
+                      }} />
                       <label style={{
                         fontSize: '14px',
-                        fontWeight: '500',
+                        fontWeight: '400',
                         fontFamily: 'Inter, sans-serif',
-                        color: '#374151',
-                        width: '30%'
+                        color: '#9CA3AF',
+                        width: 'calc(30% - 44px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '20px',
+                        flexShrink: 0
                       }}>
-                        Expiry Date . <span style={{ color: '#EF4444' }}>*</span>
+                        Expiry Date
                       </label>
                       <input
                         type="date"
@@ -2937,10 +3043,17 @@ function App() {
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
                           backgroundColor: 'white',
-                          border: '1px solid #D1D5DB',
-                          borderRadius: '8px',
-                          padding: '12px 16px',
-                          outline: 'none'
+                          border: 'none',
+                          borderLeft: '1px solid #E5E7EB',
+                          padding: '0 16px',
+                          outline: 'none',
+                          transition: 'background-color 0.15s ease'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
                         }}
                       />
                     </div>
@@ -3034,7 +3147,7 @@ function App() {
 
             {/* Form Footer */}
             <div style={{
-              padding: '24px'
+              padding: '0'
             }}>
               <button
                 onClick={handleCreateTrade}
@@ -3043,7 +3156,7 @@ function App() {
                   padding: '16px',
                   backgroundColor: '#10B981',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '0',
                   fontSize: '14px',
                   fontWeight: '700',
                   fontFamily: 'Inter, sans-serif',
@@ -3053,7 +3166,7 @@ function App() {
                   letterSpacing: '0.5px'
                 }}
               >
-                CREATE / SAVE
+                ADD TRADE
               </button>
             </div>
               </>
@@ -3081,12 +3194,12 @@ function App() {
                 <div 
                   style={{ 
                     backgroundColor: 'white',
-              borderRadius: '12px',
+              borderRadius: '8px',
               width: '90%',
               maxWidth: '600px',
               maxHeight: '90vh',
               overflow: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
             }}
           >
             {/* Header */}
@@ -3393,9 +3506,9 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: 'white',
-              borderRadius: '16px',
+              borderRadius: '8px',
               overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
               position: 'relative'
             }}
           >
@@ -3405,8 +3518,8 @@ function App() {
               onClick={() => setIsModifyTradeOpen(false)}
               style={{
                 position: 'absolute',
-                top: '16px',
-                right: '16px',
+                top: '24px',
+                right: '24px',
                 backgroundColor: 'transparent',
                 border: 'none',
                 width: '32px',
@@ -3503,7 +3616,7 @@ function App() {
               padding: '0',
               backgroundColor: '#F9FAFB'
             }}>
-              <form style={{ display: 'flex', flexDirection: 'column', gap: '0', margin: '24px', borderRadius: '12px', overflow: 'visible' }}>
+              <form style={{ display: 'flex', flexDirection: 'column', gap: '0', margin: '0', borderRadius: '0', overflow: 'visible' }}>
                 {/* Indices / Stock */}
                 <div 
                   data-dropdown="indices"
@@ -3526,17 +3639,26 @@ function App() {
                   onMouseEnter={() => setIsIndicesHovered(true)}
                   onMouseLeave={() => setIsIndicesHovered(false)}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Indices / Stock</div>
-                    <div style={{ fontSize: '16px', fontWeight: '600', color: '#000', fontFamily: 'Inter, sans-serif' }}>
-                      {selectedIndices || 'Select instrument'}
-                    </div>
-                  </div>
-                  <div style={{ color: '#6B7280' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6,9 12,15 18,9"></polyline>
+                  <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
+                    Indices / Stock
+                  </label>
+                  <button type="button" style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span style={{ color: selectedIndices ? '#000' : '#9CA3AF' }}>{selectedIndices || 'Choose'}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
-                  </div>
+                  </button>
                   
                   {/* Dropdown Menu */}
                   {isIndicesDropdownOpen && (
@@ -3628,68 +3750,158 @@ function App() {
                 </div>
 
               {/* Bias */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  fontFamily: 'Inter, sans-serif',
-                  color: '#374151',
-                  display: 'block',
-                  marginBottom: '8px'
-                }}>
-                  Bias . <span style={{ color: '#EF4444' }}>*</span>
+              <div 
+                style={{ 
+                  backgroundColor: 'white',
+                  minHeight: '60px',
+                  borderBottom: '1px solid #E5E7EB',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0 20px',
+                  transition: 'background-color 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
+                  Bias
                 </label>
-                <select
-                  value={selectedBias}
-                  onChange={(e) => setSelectedBias(e.target.value as 'bullish' | 'bearish' | 'neutral' | '')}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontFamily: 'Inter, sans-serif',
-                    color: '#000',
-                    backgroundColor: 'white',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">Select bias</option>
-                  <option value="bullish">Bullish</option>
-                  <option value="bearish">Bearish</option>
-                  <option value="neutral">Neutral</option>
-                </select>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedBias('bearish')}
+                    style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                      backgroundColor: selectedBias === 'bearish' ? '#EF4444' : '#E5E7EB',
+                      border: selectedBias === 'bearish' ? '2px solid #DC2626' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                      color: selectedBias === 'bearish' ? 'white' : '#6B7280',
+                    fontSize: '20px'
+                    }}
+                  >↙</button>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedBias('neutral')}
+                    style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                      backgroundColor: selectedBias === 'neutral' ? '#6B7280' : '#E5E7EB',
+                      border: selectedBias === 'neutral' ? '2px solid #4B5563' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                      color: selectedBias === 'neutral' ? 'white' : '#6B7280',
+                    fontSize: '20px'
+                    }}
+                  >—</button>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedBias('bullish')}
+                    style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                      backgroundColor: selectedBias === 'bullish' ? '#10B981' : '#E5E7EB',
+                      border: selectedBias === 'bullish' ? '2px solid #059669' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                      color: selectedBias === 'bullish' ? 'white' : '#6B7280',
+                    fontSize: '20px'
+                    }}
+                  >↗</button>
+                </div>
               </div>
 
               {/* Setup */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  fontFamily: 'Inter, sans-serif',
-                  color: '#374151',
-                  display: 'block',
-                  marginBottom: '8px'
-                }}>
+              <div 
+                data-dropdown="setup"
+                style={{ 
+                  backgroundColor: 'white',
+                  minHeight: '60px',
+                  borderBottom: '1px solid #E5E7EB',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0 20px',
+                  transition: 'background-color 0.2s ease',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
+                onClick={() => setSetupDropdownOpen(!setupDropdownOpen)}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <label style={{ fontSize: '14px', fontWeight: '400', fontFamily: 'Inter, sans-serif', color: '#9CA3AF' }}>
                   Setup
                 </label>
-                <input
-                  type="text"
-                  value={formData.setup}
-                  onChange={(e) => setFormData(prev => ({ ...prev, setup: e.target.value }))}
-                  placeholder="Enter setup"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontFamily: 'Inter, sans-serif',
-                    color: '#000',
+                <button type="button" style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#000',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ color: formData.setup ? '#000' : '#9CA3AF' }}>{formData.setup || 'Choose'}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                
+                {/* Setup Dropdown */}
+                {setupDropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: '20px',
+                    width: '200px',
                     backgroundColor: 'white',
-                    border: '1px solid #D1D5DB',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid #E5E7EB',
                     borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                />
+                    zIndex: 10000,
+                    overflow: 'hidden',
+                    marginTop: '4px'
+                  }}>
+                    {['STFR', 'BTST', 'STBT', 'CBO'].map((setup) => (
+                      <div
+                        key={setup}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData(prev => ({ ...prev, setup }));
+                          setSetupDropdownOpen(false);
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif',
+                          color: '#1F2937',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      >
+                        {setup}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Strategy */}
@@ -3773,37 +3985,6 @@ function App() {
                 )}
               </div>
 
-              {/* Capital */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  fontFamily: 'Inter, sans-serif',
-                  color: '#374151',
-                  display: 'block',
-                  marginBottom: '8px'
-                }}>
-                  Capital
-                </label>
-                <input
-                  type="number"
-                  value={formData.capital}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capital: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                  placeholder="Enter capital amount"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontFamily: 'Inter, sans-serif',
-                    color: '#000',
-                    backgroundColor: 'white',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
               {/* Strike Fields - Only show for Bull put spread and Bear call spread */}
               {shouldShowStrikes() && (
                 <>
@@ -3817,300 +3998,346 @@ function App() {
                     borderBottom: '1px solid #E2E8F0',
                     borderTop: '1px solid #E2E8F0'
                   }}>
-                    <h3 style={{
+                    <div style={{
+                      width: '24px',
+                      height: '100%',
+                      borderRight: '1px solid #E5E7EB',
+                      flexShrink: 0
+                    }} />
+                    <label style={{
                       fontSize: '16px',
                       fontWeight: '600',
                       fontFamily: 'Inter, sans-serif',
-                      color: '#1F2937',
-                      margin: 0
+                      color: '#1F2937'
                     }}>
                       Strike Details
-                    </h3>
+                    </label>
                   </div>
 
-                  {/* Buy Strike Section */}
+                  {/* Buy Strike */}
                   <div style={{
-                    backgroundColor: '#F0FDF4',
-                    padding: '20px',
-                    borderBottom: '1px solid #E2E8F0'
+                    backgroundColor: 'white',
+                    height: '60px',
+                    borderBottom: '1px solid #E5E7EB',
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    padding: '0'
                   }}>
-                    <h4 style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#059669',
-                      margin: '0 0 16px 0'
-                    }}>
-                      BUY STRIKE
-                    </h4>
                     <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                      gap: '16px'
+                      width: '44px',
+                      borderRight: '1px solid #E5E7EB',
+                      flexShrink: 0
+                    }} />
+                    <label style={{
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      fontFamily: 'Inter, sans-serif',
+                      color: '#9CA3AF',
+                      width: 'calc(30% - 44px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: '20px',
+                      flexShrink: 0
                     }}>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                      Buy Strike
+                    </label>
+                    <div style={{ display: 'flex', width: '70%', alignItems: 'stretch' }}>
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={strikeData.buyStrike}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="Strike"
+                        style={{
+                          flex: '1 1 0',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Strike</label>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={strikeData.buyStrike}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyStrike: parseFloat(e.target.value) || 0 }))}
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          borderLeft: '1px solid #E5E7EB',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
+                      {/* PE/CE Switch */}
+                      <div style={{
+                        flex: '0 0 60px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRight: '1px solid #E5E7EB',
+                        backgroundColor: 'white'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => setStrikeData(prev => ({ ...prev, buyOptionType: prev.buyOptionType === 'PE' ? 'CE' : 'PE' }))}
                           style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Type</label>
-                        <select
-                          value={strikeData.buyOptionType}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyOptionType: e.target.value as 'CE' | 'PE' }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            padding: '8px',
-                            width: '100%'
+                            position: 'relative',
+                            width: '48px',
+                            height: '26px',
+                            backgroundColor: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981',
+                            borderRadius: '14px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            outline: 'none'
                           }}
                         >
-                          <option value="CE">CE</option>
-                          <option value="PE">PE</option>
-                        </select>
+                          <span style={{
+                            position: 'absolute',
+                            top: '2px',
+                            left: strikeData.buyOptionType === 'PE' ? '2px' : '24px',
+                            width: '22px',
+                            height: '22px',
+                            backgroundColor: 'white',
+                            borderRadius: '50%',
+                            transition: 'left 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981'
+                          }}>
+                            {strikeData.buyOptionType}
+                          </span>
+                        </button>
                       </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={strikeData.buyLtp}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="LTP"
+                        style={{
+                          flex: '1 1 0',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>LTP</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={strikeData.buyLtp}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: parseFloat(e.target.value) || 0 }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
+                      <input
+                        type="number"
+                        step="1"
+                        value={strikeData.buyLots}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                        placeholder="Lots"
+                        style={{
+                          flex: '0 0 80px',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Lots</label>
-                        <input
-                          type="number"
-                          step="1"
-                          value={strikeData.buyLots}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: parseInt(e.target.value) || 0 }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
                     </div>
                   </div>
 
-                  {/* Sell Strike Section */}
+                  {/* Sell Strike */}
                   <div style={{
-                    backgroundColor: '#FEF2F2',
-                    padding: '20px',
-                    borderBottom: '1px solid #E2E8F0'
+                    backgroundColor: 'white',
+                    height: '60px',
+                    borderBottom: '1px solid #E5E7EB',
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    padding: '0'
                   }}>
-                    <h4 style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      fontFamily: 'Inter, sans-serif',
-                      color: '#DC2626',
-                      margin: '0 0 16px 0'
-                    }}>
-                      SELL STRIKE
-                    </h4>
                     <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                      gap: '16px'
+                      width: '44px',
+                      borderRight: '1px solid #E5E7EB',
+                      flexShrink: 0
+                    }} />
+                    <label style={{
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      fontFamily: 'Inter, sans-serif',
+                      color: '#9CA3AF',
+                      width: 'calc(30% - 44px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: '20px',
+                      flexShrink: 0
                     }}>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                      Sell Strike
+                    </label>
+                    <div style={{ display: 'flex', width: '70%', alignItems: 'stretch' }}>
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={strikeData.sellStrike}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellStrike: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="Strike"
+                        style={{
+                          flex: '1 1 0',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Strike</label>
-                        <input
-                          type="number"
-                          step="0.05"
-                          value={strikeData.sellStrike}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellStrike: parseFloat(e.target.value) || 0 }))}
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          borderLeft: '1px solid #E5E7EB',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
+                      {/* PE/CE Switch */}
+                      <div style={{
+                        flex: '0 0 60px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRight: '1px solid #E5E7EB',
+                        backgroundColor: 'white'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => setStrikeData(prev => ({ ...prev, sellOptionType: prev.sellOptionType === 'PE' ? 'CE' : 'PE' }))}
                           style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Type</label>
-                        <select
-                          value={strikeData.sellOptionType}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellOptionType: e.target.value as 'CE' | 'PE' }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            padding: '8px',
-                            width: '100%'
+                            position: 'relative',
+                            width: '48px',
+                            height: '26px',
+                            backgroundColor: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981',
+                            borderRadius: '14px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            outline: 'none'
                           }}
                         >
-                          <option value="CE">CE</option>
-                          <option value="PE">PE</option>
-                        </select>
+                          <span style={{
+                            position: 'absolute',
+                            top: '2px',
+                            left: strikeData.sellOptionType === 'PE' ? '2px' : '24px',
+                            width: '22px',
+                            height: '22px',
+                            backgroundColor: 'white',
+                            borderRadius: '50%',
+                            transition: 'left 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981'
+                          }}>
+                            {strikeData.sellOptionType}
+                          </span>
+                        </button>
                       </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={strikeData.sellLtp}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="LTP"
+                        style={{
+                          flex: '1 1 0',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>LTP</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={strikeData.sellLtp}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: parseFloat(e.target.value) || 0 }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
+                      <input
+                        type="number"
+                        step="1"
+                        value={strikeData.sellLots}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                        placeholder="Lots"
+                        style={{
+                          flex: '0 0 80px',
+                          fontSize: '14px',
+                          fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
-                          color: '#6B7280',
-                          marginBottom: '4px',
-                          textAlign: 'center'
-                        }}>Lots</label>
-                        <input
-                          type="number"
-                          step="1"
-                          value={strikeData.sellLots}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: parseInt(e.target.value) || 0 }))}
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            fontFamily: 'Inter, sans-serif',
-                            color: '#000',
-                            background: 'transparent',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            padding: '8px',
-                            width: '100%'
-                          }}
-                        />
-                      </div>
+                          color: '#000',
+                          backgroundColor: 'white',
+                          border: 'none',
+                          padding: '0 16px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      />
                     </div>
                   </div>
 
                   {/* Expiry Date */}
                   <div style={{
                     backgroundColor: 'white',
-                    padding: '20px',
-                    borderBottom: '1px solid #E2E8F0'
+                    height: '60px',
+                    borderBottom: '1px solid #E5E7EB',
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    padding: '0'
                   }}>
+                    <div style={{
+                      width: '44px',
+                      borderRight: '1px solid #E5E7EB',
+                      flexShrink: 0
+                    }} />
                     <label style={{
                       fontSize: '14px',
-                      fontWeight: '500',
+                      fontWeight: '400',
                       fontFamily: 'Inter, sans-serif',
-                      color: '#374151',
-                      display: 'block',
-                      marginBottom: '8px'
+                      color: '#9CA3AF',
+                      width: 'calc(30% - 44px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingLeft: '20px',
+                      flexShrink: 0
                     }}>
                       Expiry Date
                     </label>
@@ -4119,46 +4346,123 @@ function App() {
                       value={strikeData.expiryDate}
                       onChange={(e) => setStrikeData(prev => ({ ...prev, expiryDate: e.target.value }))}
                       style={{
-                        width: '100%',
-                        padding: '12px 16px',
+                        width: '70%',
                         fontSize: '14px',
+                        fontWeight: '600',
                         fontFamily: 'Inter, sans-serif',
                         color: '#000',
                         backgroundColor: 'white',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '8px',
-                        outline: 'none'
+                        border: 'none',
+                        borderLeft: '1px solid #E5E7EB',
+                        padding: '0 16px',
+                        outline: 'none',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
                       }}
                     />
                   </div>
                 </>
               )}
+
+              {/* Capital */}
+              <div 
+                data-hover="capital"
+                style={{ 
+                  backgroundColor: 'white',
+                  minHeight: '60px',
+                  borderBottom: '1px solid #E5E7EB',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'stretch',
+                  padding: '0',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <label style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '400', 
+                  fontFamily: 'Inter, sans-serif', 
+                  color: '#9CA3AF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  paddingLeft: '20px',
+                  width: '50%',
+                  backgroundColor: 'transparent'
+                }}>
+                  Capital
+                </label>
+                <div style={{
+                  width: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingRight: '20px'
+                }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#6B7280',
+                    marginRight: '2px'
+                  }}>₹</span>
+                  <input
+                    type="text"
+                    value={formData.capital === '' || formData.capital === 0 ? '' : 
+                      typeof formData.capital === 'number' ? 
+                      formData.capital.toLocaleString('en-IN') : 
+                      formData.capital}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/,/g, '');
+                      if (value === '' || !isNaN(Number(value))) {
+                        setFormData(prev => ({ ...prev, capital: value === '' ? '' : parseFloat(value) }));
+                      }
+                    }}
+                    placeholder="0"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      fontFamily: 'Inter, sans-serif',
+                      color: '#000',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      textAlign: 'right',
+                      width: '120px'
+                    }}
+                  />
+                </div>
+              </div>
               </form>
             </div>
 
             {/* Footer */}
             <div style={{
-              padding: '24px', 
-              borderTop: '1px solid #E5E7EB',
               display: 'flex',
-              justifyContent: 'space-between',
-              gap: '16px'
+              width: '100%'
             }}>
               <button
                 onClick={() => setIsModifyTradeOpen(false)}
                 style={{
-                  flex: 1,
-                  padding: '12px 24px',
+                  width: '50%',
+                  padding: '16px',
+                  backgroundColor: '#F3F4F6',
+                  border: 'none',
+                  borderRadius: '0',
                   fontSize: '14px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   fontFamily: 'Inter, sans-serif',
                   color: '#6B7280',
-                  backgroundColor: 'white',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
                   cursor: 'pointer',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  borderRight: '1px solid #E5E7EB'
                 }}
               >
                 CANCEL
@@ -4166,21 +4470,21 @@ function App() {
               <button
                 onClick={handleModifyTradeSubmit}
                 style={{
-                  flex: 1,
-                  padding: '12px 24px',
+                  width: '50%',
+                  padding: '16px',
+                  backgroundColor: '#10B981',
+                  border: 'none',
+                  borderRadius: '0',
                   fontSize: '14px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   fontFamily: 'Inter, sans-serif',
                   color: 'white',
-                  backgroundColor: '#3B82F6',
-                  border: 'none',
-                  borderRadius: '8px',
                   cursor: 'pointer',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}
               >
-                UPDATE TRADE
+                UPDATE
               </button>
             </div>
               </>

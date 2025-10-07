@@ -237,15 +237,19 @@ export function useCalculatedMetrics(trades: Trade[]) {
     
     console.log('🔍 Dashboard total Max Loss:', totalMaxLoss);
     
-    // Calculate total risk
-    const totalRisk = trades.reduce((sum, trade) => {
-      const value = parseFloat(trade.risk.value.replace(/%/g, ''));
-      return sum + value;
+    // Calculate buying power remaining (Total Buying Power - Deployed Capital)
+    // Total Buying Power = Transfer Capital + Closed Trades P&L
+    const closedTrades = trades.filter(t => t.status === 'closed');
+    const closedPnL = closedTrades.reduce((sum, t) => {
+      const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
+      return sum + (t.profitLoss.isProfit ? value : -value);
     }, 0);
+    const totalBuyingPower = 1600000 + closedPnL; // Transfer capital + closed P&L
+    const buyingPowerRemaining = totalBuyingPower - totalCapital;
     
-    // Calculate buying power used (sum of deployed capital)
-    const buyingPowerUsed = totalCapital;
-    const totalBuyingPower = 1600000; // This should come from user settings
+    // Calculate total risk as % of overall capital at risk (sum of max losses / total buying power)
+    const totalRiskAmount = totalMaxLoss; // Sum of all max losses
+    const totalRiskPercentage = totalBuyingPower > 0 ? (totalRiskAmount / totalBuyingPower) * 100 : 0;
     
     return {
       totalTrades,
@@ -254,10 +258,10 @@ export function useCalculatedMetrics(trades: Trade[]) {
       percentageReturn: percentageReturn >= 0 ? `+${percentageReturn.toFixed(1)}` : percentageReturn.toFixed(1),
       totalMaxProfit: totalMaxProfit.toLocaleString('en-IN'),
       totalMaxLoss: totalMaxLoss.toLocaleString('en-IN'),
-      totalRisk: totalRisk.toFixed(1),
+      totalRisk: totalRiskPercentage.toFixed(1),
       totalCapital: totalCapital.toLocaleString('en-IN'),
-      buyingPowerUsed: buyingPowerUsed.toLocaleString('en-IN'),
-      buyingPowerPercentage: ((buyingPowerUsed / totalBuyingPower) * 100).toFixed(1),
+      buyingPowerUsed: buyingPowerRemaining.toLocaleString('en-IN'),
+      buyingPowerPercentage: ((buyingPowerRemaining / totalBuyingPower) * 100).toFixed(1),
       isProfitable: totalPnL >= 0,
       backgroundColor: totalPnL >= 0 ? '#D1FAE5' : '#FEE2E2'
     };

@@ -293,8 +293,8 @@ function App() {
     setSelectedIndices(trade.instrument.name);
     setSelectedBias(trade.bias);
     setFormData({
-      setup: trade.setup.name,
-      strategy: trade.setup.type,
+      setup: trade.setup.type,
+      strategy: trade.setup.name,
       capital: parseFloat(trade.capital.value.replace(/,/g, '')) || 0,
       notes: trade.notes || '',
       daysToExpiry: trade.createdAt ? new Date(trade.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

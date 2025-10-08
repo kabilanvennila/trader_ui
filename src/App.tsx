@@ -1066,19 +1066,19 @@ function App() {
                   <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                     {/* Title */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={styles.contentAnchor}>Max Profit</div>
                       <div style={styles.contentAnchor}>Max Loss</div>
+                      <div style={styles.contentAnchor}>Max Profit</div>
                     </div>
                     
                     {/* Slider Section */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-                      {/* Max Profit - Left */}
+                      {/* Max Loss - Left */}
                       <div style={{ flex: '0 0 auto', textAlign: 'left' }}>
                         <div style={styles.mainNumber}>
-                          {formatCompactNumber(metrics.totalMaxProfit)}
+                          {formatCompactNumber(metrics.totalMaxLoss)}
                         </div>
                         <div style={{ ...styles.percentage, marginTop: '12px' }}>
-                          {((parseFloat(metrics.totalMaxProfit.replace(/,/g, '')) / parseFloat(metrics.totalCapital.replace(/,/g, ''))) * 100).toFixed(1)}%
+                          {((parseFloat(metrics.totalMaxLoss.replace(/,/g, '')) / parseFloat(metrics.totalCapital.replace(/,/g, ''))) * 100).toFixed(1)}%
                         </div>
                       </div>
                       
@@ -1089,11 +1089,11 @@ function App() {
                             const maxProfit = parseFloat(metrics.totalMaxProfit.replace(/,/g, ''));
                             const maxLoss = parseFloat(metrics.totalMaxLoss.replace(/,/g, ''));
                             const totalRange = maxProfit + maxLoss;
-                            const profitRatio = totalRange > 0 ? maxProfit / totalRange : 0.5;
+                            const lossRatio = totalRange > 0 ? maxLoss / totalRange : 0.5;
                             return (
                               <>
-                                <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
-                                <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                <div style={{ width: `${lossRatio * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                <div style={{ width: `${(1 - lossRatio) * 100}%`, backgroundColor: '#10B981' }}></div>
                               </>
                             );
                           })()}
@@ -1101,13 +1101,13 @@ function App() {
                         <div style={{ position: 'absolute', left: '50%', top: 'calc(18px + 4px)', transform: 'translate(-50%, -50%)', width: '4px', height: '20px', backgroundColor: '#1E3F66', borderRadius: '2px' }}></div>
                       </div>
                       
-                      {/* Max Loss - Right */}
+                      {/* Max Profit - Right */}
                       <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
                         <div style={styles.mainNumber}>
-                          {formatCompactNumber(metrics.totalMaxLoss)}
+                          {formatCompactNumber(metrics.totalMaxProfit)}
                         </div>
                         <div style={{ ...styles.percentage, marginTop: '12px' }}>
-                          {((parseFloat(metrics.totalMaxLoss.replace(/,/g, '')) / parseFloat(metrics.totalCapital.replace(/,/g, ''))) * 100).toFixed(1)}%
+                          {((parseFloat(metrics.totalMaxProfit.replace(/,/g, '')) / parseFloat(metrics.totalCapital.replace(/,/g, ''))) * 100).toFixed(1)}%
                         </div>
                       </div>
                     </div>
@@ -1387,8 +1387,8 @@ function App() {
                   {activeTab === 'active' && (
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '8px' }}>
-                      <span>Max Profit</span>
-                      <span style={{ paddingLeft: '24px' }}>Max Loss</span>
+                      <span>Max Loss</span>
+                      <span style={{ paddingLeft: '24px' }}>Max Profit</span>
                     </div>
                   </th>
                   )}
@@ -1529,25 +1529,27 @@ function App() {
                   {activeTab === 'closed' && (
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      {/* Max Loss - Left side (Red) */}
                       <div style={{ flex: '0 0 70px', minWidth: '70px' }}>
-                          {trade.calculatedMaxProfit ? (
+                          {trade.calculatedMaxLoss ? (
                             <>
                               <div style={styles.textPrimary}>
-                                ₹{formatCompactNumber(trade.calculatedMaxProfit.value)}
+                                ₹{formatCompactNumber(trade.calculatedMaxLoss.value)}
                               </div>
                               <div style={styles.textSecondary}>
                                 {(() => {
-                                  const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                                  const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
                                   const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
-                                  const percentage = capital > 0 ? ((calculatedProfit / capital) * 100).toFixed(1) : '0.0';
+                                  const percentage = capital > 0 ? ((calculatedLoss / capital) * 100).toFixed(1) : '0.0';
                                   return `${percentage}%`;
                                 })()}
                               </div>
                             </>
                           ) : (
-                            <div style={{ ...styles.textSecondary, fontSize: '12px', color: '#9CA3AF' }}>
-                              No strike data
-                            </div>
+                            <>
+                              <div style={styles.textPrimary}>{formatCompactNumber(trade.maxLoss.value)}</div>
+                              <div style={styles.textSecondary}>{trade.maxLoss.percentage}</div>
+                            </>
                           )}
                       </div>
                       <div style={{ flex: '1 1 auto', position: 'relative' }}>
@@ -1557,22 +1559,22 @@ function App() {
                                 const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
                                 const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
                                 const totalRange = calculatedProfit + calculatedLoss;
-                                const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
+                                const lossRatio = totalRange > 0 ? calculatedLoss / totalRange : 0.5;
                                 return (
                                   <>
-                                    <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
-                                    <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                    <div style={{ width: `${lossRatio * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                    <div style={{ width: `${(1 - lossRatio) * 100}%`, backgroundColor: '#10B981' }}></div>
                                   </>
                                 );
                               } else if (trade.calculatedMaxProfit) {
                                 const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
                                 const maxLoss = parseFloat(trade.maxLoss.value.replace(/,/g, ''));
                                 const totalRange = calculatedProfit + maxLoss;
-                                const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
+                                const lossRatio = totalRange > 0 ? maxLoss / totalRange : 0.5;
                                 return (
                                   <>
-                                    <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
-                                    <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                    <div style={{ width: `${lossRatio * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                    <div style={{ width: `${(1 - lossRatio) * 100}%`, backgroundColor: '#10B981' }}></div>
                                   </>
                                 );
                               } else {
@@ -1595,8 +1597,6 @@ function App() {
                               const totalRange = calculatedProfit + calculatedLoss;
                               
                               // Position slider based on where actual P&L falls
-                              // If actualPnL = maxProfit, position at 100% profit side (left)
-                              // If actualPnL = -maxLoss, position at 0% (right)
                               const position = totalRange > 0 ? ((actualPnL + calculatedLoss) / totalRange) * 100 : 50;
                               return `${Math.max(0, Math.min(100, position))}%`;
                             }
@@ -1610,26 +1610,26 @@ function App() {
                           borderRadius: '2px' 
                         }}></div>
                       </div>
+                      {/* Max Profit - Right side (Green) */}
                       <div style={{ flex: '0 0 70px', minWidth: '70px', textAlign: 'right' }}>
-                          {trade.calculatedMaxLoss ? (
+                          {trade.calculatedMaxProfit ? (
                             <>
                               <div style={styles.textPrimary}>
-                                ₹{formatCompactNumber(trade.calculatedMaxLoss.value)}
+                                ₹{formatCompactNumber(trade.calculatedMaxProfit.value)}
                               </div>
                               <div style={styles.textSecondary}>
                                 {(() => {
-                                  const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                                  const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
                                   const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
-                                  const percentage = capital > 0 ? ((calculatedLoss / capital) * 100).toFixed(1) : '0.0';
+                                  const percentage = capital > 0 ? ((calculatedProfit / capital) * 100).toFixed(1) : '0.0';
                                   return `${percentage}%`;
                                 })()}
                               </div>
                             </>
                           ) : (
-                            <>
-                              <div style={styles.textPrimary}>{formatCompactNumber(trade.maxLoss.value)}</div>
-                              <div style={styles.textSecondary}>{trade.maxLoss.percentage}</div>
-                            </>
+                            <div style={{ ...styles.textSecondary, fontSize: '12px', color: '#9CA3AF' }}>
+                              No strike data
+                            </div>
                           )}
                       </div>
                     </div>
@@ -1646,31 +1646,56 @@ function App() {
                     <div style={styles.textSecondary}>{formatCompactNumber(trade.maxLoss.value)}</div>
                   </td>
                   <td style={{ padding: '0', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', position: 'relative' }}>
-                    <div style={{ display: 'flex', height: '100%' }}>
+                    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
                       {activeTab === 'active' && (
                         <>
                           <div 
                             style={{ 
-                              flex: 1, 
+                              width: '50%',
                               display: 'flex', 
                               alignItems: 'center', 
-                              justifyContent: 'center', 
-                              padding: '16px', 
+                              justifyContent: 'center',
                               cursor: trade.status === 'active' ? 'pointer' : 'not-allowed',
-                              opacity: trade.status === 'active' ? 1 : 0.3
+                              opacity: trade.status === 'active' ? 1 : 0.3,
+                              transition: 'background-color 0.2s ease'
                             }}
                             onClick={trade.status === 'active' ? () => handleOpenCloseTrade(trade) : undefined}
+                            onMouseEnter={(e) => {
+                              if (trade.status === 'active') {
+                                e.currentTarget.style.backgroundColor = '#FEF2F2';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                             title={trade.status === 'active' ? "Close Trade" : "Trade already closed"}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none">
                               <path d="M5 11.001H3C2.73478 11.001 2.48043 10.8956 2.29289 10.7081C2.10536 10.5205 2 10.2662 2 10.001V3.00098C2 2.73576 2.10536 2.48141 2.29289 2.29387C2.48043 2.10633 2.73478 2.00098 3 2.00098H5M8.5 9.00098L11 6.50098M11 6.50098L8.5 4.00098M11 6.50098H5" stroke="#FF2929" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                           </div>
-                          <div style={{ width: '1px' }}></div>
+                          <div style={{ width: '1px', backgroundColor: '#E5E7EB', alignSelf: 'stretch' }}></div>
                         </>
                       )}
-                      <div className="menu-trigger" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', cursor: 'pointer' }} onClick={() => toggleMenu(`row${trade.id}`)}>
-                        <span style={{ fontSize: '14px', color: '#6B7280' }}>⋮</span>
+                      <div 
+                        className="menu-trigger" 
+                        style={{ 
+                          width: activeTab === 'active' ? '50%' : '100%',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }} 
+                        onClick={() => toggleMenu(`row${trade.id}`)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#E5E7EB';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <span style={{ fontSize: '20px', color: '#374151', fontWeight: '700', lineHeight: '1' }}>⋮</span>
                       </div>
                     </div>
                     {openMenuId === `row${trade.id}` && (
@@ -1771,6 +1796,8 @@ function App() {
               handleModifyClosedTrade={handleModifyTrade}
               handleDeleteTrade={handleDeleteTrade}
               renderBiasIcon={renderBiasIcon}
+              getBiasCellColor={getBiasCellColor}
+              getBiasCellClass={getBiasCellClass}
             />
           )}
         </main>

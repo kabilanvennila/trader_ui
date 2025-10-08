@@ -319,21 +319,29 @@ function Transfers() {
                     </td>
 
                     {/* Actions - Delete Button */}
-                    <td style={{ padding: '16px', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', textAlign: 'center' }}>
-                      <button 
+                    <td style={{ padding: '0', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', textAlign: 'center', overflow: 'hidden' }}>
+                      <div 
                         onClick={() => handleDeleteTransfer(transfer.id)}
                         style={{
-                          background: 'none',
-                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '100%',
                           cursor: 'pointer',
-                          padding: '4px',
-                          color: '#EF4444',
-                          fontSize: '18px'
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#FEE2E2';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                         title="Delete"
                       >
-                        🗑️
-                      </button>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M2 4H14M5.5 7V12M10.5 7V12M3 4L4 14H12L13 4M6 4V2H10V4" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                     </td>
                   </tr>
                   ))

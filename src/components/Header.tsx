@@ -69,11 +69,12 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
                 style={{
                   color: activePage === 'dashboard' ? '#1E3F66' : '#8E9FB2',
                   fontFamily: 'Inter, sans-serif',
-                  fontWeight: activePage === 'dashboard' ? '600' : '400',
+                  fontWeight: '500',
                   fontSize: '16px',
                   cursor: 'pointer',
                   background: 'none',
-                  border: 'none'
+                  border: 'none',
+                  textShadow: activePage === 'dashboard' ? '0 0 0.5px currentColor' : 'none'
                 }}>Analyse</button>
             ) : (
               <Link to="/" style={{
@@ -91,12 +92,13 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
             <Link to="/transfers" style={{
               color: currentPath === '/transfers' ? '#1E3F66' : '#8E9FB2',
               fontFamily: 'Inter, sans-serif',
-              fontWeight: currentPath === '/transfers' ? '600' : '400',
+              fontWeight: '500',
               fontSize: '16px',
               textDecoration: 'none',
               background: 'none',
               border: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              textShadow: currentPath === '/transfers' ? '0 0 0.5px currentColor' : 'none'
             }}>Transfers</Link>
 
             <button style={{
@@ -126,11 +128,12 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
                 style={{
                   color: activePage === 'closed' ? '#1E3F66' : '#8E9FB2',
                   fontFamily: 'Inter, sans-serif',
-                  fontWeight: activePage === 'closed' ? '600' : '400',
+                  fontWeight: '500',
                   fontSize: '16px',
                   cursor: 'pointer',
                   background: 'none',
-                  border: 'none'
+                  border: 'none',
+                  textShadow: activePage === 'closed' ? '0 0 0.5px currentColor' : 'none'
                 }}>History</button>
             ) : (
               <Link 
@@ -139,7 +142,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
                 style={{
                   color: '#8E9FB2',
                   fontFamily: 'Inter, sans-serif',
-                  fontWeight: '400',
+                  fontWeight: '500',
                   fontSize: '16px',
                   textDecoration: 'none',
                   background: 'none',

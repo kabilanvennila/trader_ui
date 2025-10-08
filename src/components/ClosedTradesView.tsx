@@ -10,6 +10,8 @@ interface ClosedTradesViewProps {
   handleModifyClosedTrade: (trade: Trade) => void;
   handleDeleteTrade: (trade: Trade) => void;
   renderBiasIcon: (bias: 'bullish' | 'bearish' | 'neutral') => JSX.Element;
+  getBiasCellColor: (bias: 'bullish' | 'bearish' | 'neutral') => string;
+  getBiasCellClass: (bias: 'bullish' | 'bearish' | 'neutral') => string;
 }
 
 const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
@@ -21,7 +23,9 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
   toggleMenu,
   handleModifyClosedTrade,
   handleDeleteTrade,
-  renderBiasIcon
+  renderBiasIcon,
+  getBiasCellColor,
+  getBiasCellClass
 }) => {
   // Filter only closed trades
   const closedTrades = trades.filter(t => t.status === 'closed');
@@ -30,10 +34,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
     <>
       {/* Capital Growth Chart Section */}
       <section style={{
-        borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-        borderRight: '1px solid rgba(217, 217, 217, 0.5)',
         borderBottom: '1px solid rgba(217, 217, 217, 0.5)',
-        borderTop: '1px solid rgba(217, 217, 217, 0.5)',
         backgroundColor: 'transparent',
         padding: '32px 40px 32px 40px',
         marginBottom: '40px'
@@ -280,7 +281,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           {/* Box 2: Max Profit */}
           <div style={{ width: 'calc((100% - 3px) / 4)', backgroundColor: 'white', boxSizing: 'border-box', overflow: 'hidden', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
             <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div style={styles.contentAnchor}>Max Profit</div>
+              <div style={styles.contentAnchor}>Maximum Profit on a single Trade</div>
               <div>
                 {(() => {
                   const profitTrades = closedTrades.filter(t => t.profitLoss.isProfit);
@@ -320,7 +321,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           {/* Box 3: Max Loss */}
           <div style={{ width: 'calc((100% - 3px) / 4)', backgroundColor: 'white', boxSizing: 'border-box', overflow: 'hidden', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
             <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div style={styles.contentAnchor}>Max Loss</div>
+              <div style={styles.contentAnchor}>Maximum Loss on a single Trade</div>
               <div>
                 {(() => {
                   const lossTrades = closedTrades.filter(t => !t.profitLoss.isProfit);
@@ -415,9 +416,8 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Profit / Loss</th>
               <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Max Profit</span>
-                  <span style={{ fontWeight: '700', opacity: 0.5 }}>|</span>
                   <span>Max Loss</span>
+                  <span>Max Profit</span>
                 </div>
               </th>
               <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Capital</th>
@@ -434,22 +434,23 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               </tr>
             ) : (
               closedTrades.map((trade) => (
-                <tr key={trade.id} className="table-row" style={{ backgroundColor: 'white', transition: 'background-color 0.2s ease', cursor: 'pointer' }}>
+                <tr key={trade.id} className="table-row">
                   {/* Date */}
-                  <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>{trade.date.month}</span>
-                      <span style={{ fontSize: '20px', fontWeight: '700', color: '#1F2937', fontFamily: 'Inter, sans-serif' }}>{trade.date.day}</span>
+                  <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', border: '3px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
+                      <div style={{ backgroundColor: '#1E3F66', color: 'white', textAlign: 'center', fontSize: '8px', fontWeight: '700', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.month}</div>
+                      <div style={{ backgroundColor: 'white', color: '#1E3F66', textAlign: 'center', fontSize: '14px', fontWeight: '700', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.day}</div>
                     </div>
                   </td>
 
                   {/* Instrument */}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={styles.textPrimary}>{trade.instrument.name}</div>
+                    <div style={styles.textSecondary}>Index</div>
                   </td>
 
                   {/* Bias */}
-                  <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                  <td className={getBiasCellClass(trade.bias)} style={{ padding: '16px', backgroundColor: getBiasCellColor(trade.bias), borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       {renderBiasIcon(trade.bias)}
                     </div>
@@ -457,13 +458,14 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
 
                   {/* Setup/Strategy */}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={styles.textPrimary}>{trade.setup.name}</div>
-                    <div style={styles.textSecondary}>{trade.instrument.type}</div>
+                    <div style={styles.textPrimary}>{trade.setup.type}</div>
+                    <div style={styles.textSecondary}>{trade.setup.name}</div>
                   </td>
 
                   {/* Lots */}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={styles.textPrimary}>{trade.lots.value}</div>
+                    <div style={styles.textSecondary}>{trade.lots.type}</div>
                   </td>
 
                   {/* Profit/Loss */}
@@ -479,61 +481,8 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                   {/* Max Profit / Max Loss */}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      {/* Max Loss - Left side (Red) */}
                       <div style={{ flex: '0 0 70px', minWidth: '70px' }}>
-                        {trade.calculatedMaxProfit ? (
-                          <>
-                            <div style={styles.textPrimary}>
-                              ₹{formatCompactNumber(trade.calculatedMaxProfit.value)}
-                            </div>
-                            <div style={styles.textSecondary}>
-                              {(() => {
-                                const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
-                                const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
-                                const percentage = capital > 0 ? ((calculatedProfit / capital) * 100).toFixed(1) : '0.0';
-                                return `${percentage}%`;
-                              })()}
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ ...styles.textSecondary, fontSize: '12px', color: '#9CA3AF' }}>
-                            No strike data
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: '1 1 auto', position: 'relative' }}>
-                        <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                          {(() => {
-                            if (trade.calculatedMaxProfit && trade.calculatedMaxLoss) {
-                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
-                              const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
-                              const totalRange = calculatedProfit + calculatedLoss;
-                              const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
-                              return (
-                                <>
-                                  <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
-                                  <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
-                                </>
-                              );
-                            } else if (trade.calculatedMaxProfit) {
-                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
-                              const maxLoss = parseFloat(trade.maxLoss.value.replace(/,/g, ''));
-                              const totalRange = calculatedProfit + maxLoss;
-                              const profitRatio = totalRange > 0 ? calculatedProfit / totalRange : 0.5;
-                              return (
-                                <>
-                                  <div style={{ width: `${profitRatio * 100}%`, backgroundColor: '#10B981' }}></div>
-                                  <div style={{ width: `${(1 - profitRatio) * 100}%`, backgroundColor: '#EF4444' }}></div>
-                                </>
-                              );
-                            } else {
-                              return (
-                                <div style={{ width: '100%', backgroundColor: '#E5E7EB' }}></div>
-                              );
-                            }
-                          })()}
-                        </div>
-                      </div>
-                      <div style={{ flex: '0 0 70px', minWidth: '70px', textAlign: 'right' }}>
                         {trade.calculatedMaxLoss ? (
                           <>
                             <div style={styles.textPrimary}>
@@ -555,6 +504,85 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                           </>
                         )}
                       </div>
+                      <div style={{ flex: '1 1 auto', position: 'relative' }}>
+                        <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                          {(() => {
+                            if (trade.calculatedMaxProfit && trade.calculatedMaxLoss) {
+                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                              const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                              const totalRange = calculatedProfit + calculatedLoss;
+                              const lossRatio = totalRange > 0 ? calculatedLoss / totalRange : 0.5;
+                              return (
+                                <>
+                                  <div style={{ width: `${lossRatio * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                  <div style={{ width: `${(1 - lossRatio) * 100}%`, backgroundColor: '#10B981' }}></div>
+                                </>
+                              );
+                            } else if (trade.calculatedMaxProfit) {
+                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                              const maxLoss = parseFloat(trade.maxLoss.value.replace(/,/g, ''));
+                              const totalRange = calculatedProfit + maxLoss;
+                              const lossRatio = totalRange > 0 ? maxLoss / totalRange : 0.5;
+                              return (
+                                <>
+                                  <div style={{ width: `${lossRatio * 100}%`, backgroundColor: '#EF4444' }}></div>
+                                  <div style={{ width: `${(1 - lossRatio) * 100}%`, backgroundColor: '#10B981' }}></div>
+                                </>
+                              );
+                            } else {
+                              return (
+                                <div style={{ width: '100%', backgroundColor: '#E5E7EB' }}></div>
+                              );
+                            }
+                          })()}
+                        </div>
+                        {/* Slider position based on actual P&L */}
+                        <div style={{ 
+                          position: 'absolute', 
+                          left: (() => {
+                            // Calculate slider position based on actual P&L
+                            if (trade.calculatedMaxProfit && trade.calculatedMaxLoss) {
+                              const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                              const calculatedLoss = parseFloat(trade.calculatedMaxLoss.value.replace(/,/g, ''));
+                              const actualPnL = parseFloat(trade.profitLoss.value.replace(/[₹,+]/g, ''));
+                              const totalRange = calculatedProfit + calculatedLoss;
+                              
+                              // Position slider based on where actual P&L falls
+                              const position = totalRange > 0 ? ((actualPnL + calculatedLoss) / totalRange) * 100 : 50;
+                              return `${Math.max(0, Math.min(100, position))}%`;
+                            }
+                            return '50%';
+                          })(), 
+                          top: '50%', 
+                          transform: 'translate(-50%, -50%)', 
+                          width: '3px', 
+                          height: '14px', 
+                          backgroundColor: '#1E3F66', 
+                          borderRadius: '2px' 
+                        }}></div>
+                      </div>
+                      {/* Max Profit - Right side (Green) */}
+                      <div style={{ flex: '0 0 70px', minWidth: '70px', textAlign: 'right' }}>
+                        {trade.calculatedMaxProfit ? (
+                          <>
+                            <div style={styles.textPrimary}>
+                              ₹{formatCompactNumber(trade.calculatedMaxProfit.value)}
+                            </div>
+                            <div style={styles.textSecondary}>
+                              {(() => {
+                                const calculatedProfit = parseFloat(trade.calculatedMaxProfit.value.replace(/,/g, ''));
+                                const capital = parseFloat(trade.capital.value.replace(/,/g, ''));
+                                const percentage = capital > 0 ? ((calculatedProfit / capital) * 100).toFixed(1) : '0.0';
+                                return `${percentage}%`;
+                              })()}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ ...styles.textSecondary, fontSize: '12px', color: '#9CA3AF' }}>
+                            No strike data
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
 
@@ -566,12 +594,15 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
 
                   {/* @Risk */}
                   <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={styles.textPrimary}>{trade.risk.value}</div>
+                    <div style={styles.textPrimary}>
+                      {totalCapital > 0 ? ((parseFloat(trade.maxLoss.value.replace(/[₹,]/g, '')) / totalCapital) * 100).toFixed(2) + '%' : '0.0%'}
+                    </div>
+                    <div style={styles.textSecondary}>{formatCompactNumber(trade.maxLoss.value)}</div>
                   </td>
 
                   {/* Actions */}
-                  <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <td style={{ padding: '0', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', position: 'relative' }}>
+                    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
                       {trade.status === 'active' && (
                         <>
                           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', cursor: 'pointer' }}>
@@ -582,8 +613,26 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                           <div style={{ width: '1px' }}></div>
                         </>
                       )}
-                      <div className="menu-trigger" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', cursor: 'pointer' }} onClick={() => toggleMenu(`row${trade.id}`)}>
-                        <span style={{ fontSize: '14px', color: '#6B7280' }}>⋮</span>
+                      <div 
+                        className="menu-trigger" 
+                        style={{ 
+                          flex: 1, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          padding: '16px', 
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }} 
+                        onClick={() => toggleMenu(`row${trade.id}`)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#E5E7EB';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <span style={{ fontSize: '20px', color: '#374151', fontWeight: '700', lineHeight: '1' }}>⋮</span>
                       </div>
                     </div>
                     {openMenuId === `row${trade.id}` && (

@@ -67,6 +67,7 @@ const styles = {
 import { useTrades, useCalculatedMetrics } from './hooks/useTrades';
 import { useInstrumentManager } from './hooks/useMarket';
 import Header from './components/Header';
+import ClosedTradesView from './components/ClosedTradesView';
 
 // Compact number formatter for Indian numbering system
 function formatCompactNumber(value: number | string): string {
@@ -138,9 +139,6 @@ function App() {
   
   // State for active page navigation
   const [activePage, setActivePage] = useState<'dashboard' | 'closed'>('dashboard');
-  
-  // State for trade tabs
-  const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
   
   // State for Add New Trade form
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -260,24 +258,11 @@ function App() {
   const filteredIndices = indicesSearchQuery.trim() ? searchedIndices : indices;
   const filteredStocks = indicesSearchQuery.trim() ? searchedStocks : stocks;
   
-  // Filter trades based on active tab
-  const filteredTrades = trades.filter(trade => {
-    if (activeTab === 'active') {
-      return trade.status === 'active';
-    } else {
-      return trade.status === 'closed';
-    }
-  });
+  // Filter trades - only show active trades in Analyse page
+  const filteredTrades = trades.filter(trade => trade.status === 'active');
   
-  // Debug closed trades
-  console.log('🔍 Debug closed trades:', {
-    activeTab,
-    totalTrades: trades.length,
-    filteredTrades: filteredTrades.length,
-    closedTrades: trades.filter(t => t.status === 'closed'),
-    closedTradesWithPnL: trades.filter(t => t.status === 'closed' && t.actualPnL !== undefined),
-    allTradeStatuses: trades.map(t => ({ id: t.id, status: t.status, actualPnL: t.actualPnL }))
-  });
+  // Since we removed the closed tab, activeTab is always 'active' in Analyse page
+  const activeTab = 'active' as const;
   
   // Calculate metrics from filtered trade data (based on active tab)
   const metrics = useCalculatedMetrics(filteredTrades);
@@ -1042,327 +1027,6 @@ function App() {
           </div>
           </section>
 
-          {/* Trades Tabs */}
-          {!tradesLoading && !tradesError && (
-            <div style={{ 
-              marginBottom: '40px',
-              borderTop: '1px dashed #DEE2E8',
-              borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-              borderRight: '1px solid rgba(217, 217, 217, 0.5)',
-              display: 'flex',
-              backgroundColor: '#F9FAFB'
-            }}>
-              <div style={{ display: 'flex', gap: '0', width: '50%' }}>
-                <button
-                  onClick={() => setActiveTab('active')}
-                  style={{
-                    flex: 1,
-                    padding: '16px 24px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    fontFamily: 'Inter, sans-serif',
-                    color: activeTab === 'active' ? '#1E3F66' : '#6B7280',
-                    backgroundColor: activeTab === 'active' ? 'white' : '#F9FAFB',
-                    border: 'none',
-                    borderRight: activeTab === 'active' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
-                    borderBottom: activeTab === 'active' ? 'none' : '1px dashed #DEE2E8',
-                    cursor: 'pointer',
-                    textTransform: 'none',
-                    letterSpacing: '0px',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'active') {
-                      e.currentTarget.style.color = '#374151';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'active') {
-                      e.currentTarget.style.color = '#6B7280';
-                    }
-                  }}
-                >
-                  Active Trades
-                  <span style={{
-                    marginLeft: '8px',
-                    backgroundColor: activeTab === 'active' ? '#02D196' : '#9CA3AF',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    padding: '4px 8px',
-                    borderRadius: '100px',
-                    minWidth: '32px',
-                    textAlign: 'center',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {trades.filter(t => t.status === 'active').length}
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('closed')}
-                  style={{
-                    flex: 1,
-                    padding: '16px 24px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    fontFamily: 'Inter, sans-serif',
-                    color: activeTab === 'closed' ? '#1E3F66' : '#6B7280',
-                    backgroundColor: activeTab === 'closed' ? 'white' : '#F9FAFB',
-                    border: 'none',
-                    borderLeft: activeTab === 'closed' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
-                    borderRight: activeTab === 'closed' ? '1px solid rgba(217, 217, 217, 0.5)' : 'none',
-                    borderBottom: activeTab === 'closed' ? 'none' : '1px dashed #DEE2E8',
-                    cursor: 'pointer',
-                    textTransform: 'none',
-                    letterSpacing: '0px',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'closed') {
-                      e.currentTarget.style.color = '#374151';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'closed') {
-                      e.currentTarget.style.color = '#6B7280';
-                    }
-                  }}
-                >
-                  Closed Trades
-                  <span style={{
-                    marginLeft: '8px',
-                    backgroundColor: activeTab === 'closed' ? '#02D196' : '#9CA3AF',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    padding: '4px 8px',
-                    borderRadius: '100px',
-                    minWidth: '32px',
-                    textAlign: 'center',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {trades.filter(t => t.status === 'closed').length}
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Capital Growth Chart Section - Only for Closed Trades */}
-          {activeTab === 'closed' && (
-          <section style={{
-            borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-            borderRight: '1px solid rgba(217, 217, 217, 0.5)',
-            borderBottom: '1px solid rgba(217, 217, 217, 0.5)',
-            backgroundColor: 'transparent',
-            padding: '32px 40px 32px 40px',
-            marginBottom: '40px'
-          }}>
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '8px' }}>
-                Account Value
-              </div>
-              {(() => {
-                // Use the same calculation as Total Profit/Loss section (closed trades only)
-                const closedTrades = trades.filter(t => t.status === 'closed');
-                const closedPnL = closedTrades.reduce((sum, t) => {
-                  const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
-                  return sum + (t.profitLoss.isProfit ? value : -value);
-                }, 0);
-                const totalCapitalWithPnL = totalCapital + closedPnL;
-                
-                // Calculate deployed capital for closed trades
-                const closedDeployedCapital = closedTrades.reduce((sum, t) => {
-                  return sum + parseFloat(t.capital.value.replace(/[₹,]/g, ''));
-                }, 0);
-                
-                const percentageReturn = closedDeployedCapital > 0 ? ((closedPnL / closedDeployedCapital) * 100) : 0;
-                
-                return (
-                  <>
-                    <div style={{ fontSize: '40px', fontWeight: '700', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>
-                      ₹{formatCompactNumber(totalCapitalWithPnL.toLocaleString('en-IN'))}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px', color: closedPnL >= 0 ? '#10B981' : '#EF4444' }}>{closedPnL >= 0 ? '▲' : '▼'}</span>
-                      <span style={{ fontSize: '16px', fontWeight: '600', color: closedPnL >= 0 ? '#10B981' : '#EF4444', fontFamily: 'Inter, sans-serif' }}>
-                        ₹{formatCompactNumber(Math.abs(closedPnL).toLocaleString('en-IN'))} ({Math.abs(percentageReturn).toFixed(2)}%)
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>All Time</span>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-            
-            {/* Simple Line Chart */}
-            <div style={{ position: 'relative', height: '280px', width: 'calc(100% + 80px)', marginLeft: '-40px', marginRight: '-40px', marginBottom: '16px' }}>
-              <svg width="100%" height="100%" viewBox="0 0 1000 280" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-                
-                {/* Growth line - Based on actual trade dates and values */}
-                {(() => {
-                  const startingCapital = totalCapital;
-                  const startDate = new Date(2025, 9, 1); // Oct 1, 2025
-                  const endDate = new Date(2026, 2, 31); // March 31, 2026
-                  const timeRange = endDate.getTime() - startDate.getTime();
-                  
-                  // Get only closed trades
-                  const closedTrades = trades.filter(t => t.status === 'closed');
-                  
-                  // Build data points with actual dates and running capital
-                  let runningCapital = startingCapital;
-                  const dataPoints = [{ x: 0, y: startingCapital }];
-                  
-                  if (closedTrades.length > 0) {
-                    // Spread trades between Oct 1 and Oct 7 (today)
-                    const tradingDays = 6; // Oct 1 to Oct 7
-                    const daysPerTrade = tradingDays / closedTrades.length;
-                    
-                    closedTrades.forEach((trade, index) => {
-                      const tradePnL = parseFloat(trade.profitLoss.value.replace(/[₹,+-]/g, '')) * (trade.profitLoss.isProfit ? 1 : -1);
-                      runningCapital += tradePnL;
-                      
-                      // Place trade between Oct 1 and Oct 7
-                      const daysFromStart = (index + 1) * daysPerTrade;
-                      const tradeDate = new Date(startDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
-                      const xPosition = (tradeDate.getTime() - startDate.getTime()) / timeRange;
-                      
-                      dataPoints.push({ x: xPosition, y: runningCapital });
-                    });
-                  } else {
-                    // If no closed trades, just show flat line at start
-                    dataPoints.push({ x: 0.01, y: startingCapital });
-                  }
-                  
-                  const minY = Math.min(...dataPoints.map(p => p.y));
-                  const maxY = Math.max(...dataPoints.map(p => p.y));
-                  const range = maxY - minY || 1;
-                  
-                  // Calculate baseline Y position (starting capital)
-                  const baselineY = 280 - ((startingCapital - minY) / range) * 260 - 10;
-                  
-                  const pathData = dataPoints.map((point, i) => {
-                    const x = point.x * 1000;
-                    const y = 280 - ((point.y - minY) / range) * 260 - 10;
-                    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                  }).join(' ');
-                  
-                  // Create area fill path with baseline
-                  const lastPoint = dataPoints[dataPoints.length - 1];
-                  const lastX = lastPoint.x * 1000;
-                  const areaPath = `${pathData} L ${lastX} ${baselineY} L 0 ${baselineY} Z`;
-                  
-                  return (
-                    <>
-                      <defs>
-                        {/* Positive gradient (green) */}
-                        <linearGradient id="positiveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" style={{ stopColor: '#10B981', stopOpacity: 0.3 }} />
-                          <stop offset="100%" style={{ stopColor: '#10B981', stopOpacity: 0.05 }} />
-                        </linearGradient>
-                        {/* Negative gradient (red) */}
-                        <linearGradient id="negativeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" style={{ stopColor: '#EF4444', stopOpacity: 0.05 }} />
-                          <stop offset="100%" style={{ stopColor: '#EF4444', stopOpacity: 0.3 }} />
-                        </linearGradient>
-                        
-                        {/* Clip path for positive area (above baseline) */}
-                        <clipPath id="positiveClip">
-                          <rect x="0" y="0" width="1000" height={baselineY} />
-                        </clipPath>
-                        
-                        {/* Clip path for negative area (below baseline) */}
-                        <clipPath id="negativeClip">
-                          <rect x="0" y={baselineY} width="1000" height={280 - baselineY} />
-                        </clipPath>
-                      </defs>
-                      
-                      {/* Positive area fill (above baseline) */}
-                      <path 
-                        d={areaPath} 
-                        fill="url(#positiveGradient)" 
-                        clipPath="url(#positiveClip)"
-                      />
-                      
-                      {/* Negative area fill (below baseline) */}
-                      <path 
-                        d={areaPath} 
-                        fill="url(#negativeGradient)" 
-                        clipPath="url(#negativeClip)"
-                      />
-                      
-                      {/* Baseline (starting capital) - subtle line */}
-                      <line 
-                        x1="0" 
-                        y1={baselineY} 
-                        x2={lastX} 
-                        y2={baselineY} 
-                        stroke="#D1D5DB" 
-                        strokeWidth="1" 
-                        strokeDasharray="4 4"
-                        opacity="0.5"
-                      />
-                      
-                      {/* Line stroke - green above baseline */}
-                      <path 
-                        d={pathData} 
-                        stroke="#10B981" 
-                        strokeWidth="2" 
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        clipPath="url(#positiveClip)"
-                      />
-                      
-                      {/* Line stroke - red below baseline */}
-                      <path 
-                        d={pathData} 
-                        stroke="#EF4444" 
-                        strokeWidth="2" 
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        clipPath="url(#negativeClip)"
-                      />
-                    </>
-                  );
-                })()}
-              </svg>
-              
-              {/* Time Scale - Oct 2025 to March 2026 across 16 columns */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', marginBottom: '8px', marginLeft: '0', marginRight: '0' }}>
-                {(() => {
-                  const startDate = new Date(2025, 9, 1); // Oct 1, 2025
-                  const endDate = new Date(2026, 2, 31); // March 31, 2026
-                  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                  const timestamps = [];
-                  
-                  for (let i = 0; i < 16; i++) {
-                    const daysOffset = (totalDays / 15) * i; // 15 intervals for 16 points
-                    const date = new Date(startDate.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-                    const month = date.toLocaleDateString('en-US', { month: 'short' });
-                    const day = date.getDate();
-                    
-                    timestamps.push(
-                      <div key={i} style={{ flex: '1 1 0', fontSize: '10px', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
-                        {month} {day}
-                      </div>
-                    );
-                  }
-                  
-                  return timestamps;
-                })()}
-              </div>
-            </div>
-          </section>
-          )}
 
           {/* Running Trades Section */}
           <section style={{
@@ -2093,6 +1757,21 @@ function App() {
             )}
           </section>
           </>
+          )}
+
+          {/* History Page - Uses ClosedTradesView component */}
+          {activePage === 'closed' && (
+            <ClosedTradesView
+              trades={trades}
+              totalCapital={totalCapital}
+              formatCompactNumber={formatCompactNumber}
+              styles={styles}
+              openMenuId={openMenuId}
+              toggleMenu={toggleMenu}
+              handleModifyClosedTrade={handleModifyTrade}
+              handleDeleteTrade={handleDeleteTrade}
+              renderBiasIcon={renderBiasIcon}
+            />
           )}
         </main>
       </div>

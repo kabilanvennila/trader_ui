@@ -284,6 +284,21 @@ function App() {
   };
 
   const handleModifyTrade = (trade: Trade) => {
+    // If trade is closed, open the Close Trade form to modify closing details
+    if (trade.status === 'closed') {
+      setSelectedTradeToClose(trade);
+      // Pre-populate with existing closing data
+      setCloseTradeData({
+        actualPnL: trade.actualPnL || 0,
+        closingDate: trade.closingDate || new Date().toISOString().split('T')[0],
+        notes: trade.notes || '',
+      });
+      setIsCloseTradeOpen(true);
+      setOpenMenuId(null);
+      return;
+    }
+    
+    // For active trades, open the Modify Trade form
     setSelectedTradeToModify(trade);
     // Pre-populate form with existing trade data
     setSelectedIndices(trade.instrument.name);
@@ -2741,7 +2756,8 @@ function App() {
                           placeholder="Strike"
                           style={{
                             flex: '1 1 0',
-                            fontSize: '14px',
+                            minWidth: '100px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
@@ -2749,7 +2765,7 @@ function App() {
                             border: 'none',
                             borderLeft: '1px solid #E5E7EB',
                             borderRight: '1px solid #E5E7EB',
-                            padding: '0 16px',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -2761,7 +2777,7 @@ function App() {
                         />
                         {/* PE/CE Switch */}
                         <div style={{
-                          flex: '0 0 60px',
+                          flex: '0 0 55px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2773,10 +2789,10 @@ function App() {
                             onClick={() => setStrikeData(prev => ({ ...prev, buyOptionType: prev.buyOptionType === 'PE' ? 'CE' : 'PE' }))}
                             style={{
                               position: 'relative',
-                              width: '48px',
-                              height: '26px',
+                              width: '44px',
+                              height: '24px',
                               backgroundColor: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981',
-                              borderRadius: '14px',
+                              borderRadius: '12px',
                               border: 'none',
                               cursor: 'pointer',
                               transition: 'background-color 0.2s',
@@ -2786,16 +2802,16 @@ function App() {
                             <span style={{
                               position: 'absolute',
                               top: '2px',
-                              left: strikeData.buyOptionType === 'PE' ? '2px' : '24px',
-                              width: '22px',
-                              height: '22px',
+                              left: strikeData.buyOptionType === 'PE' ? '2px' : '22px',
+                              width: '20px',
+                              height: '20px',
                               backgroundColor: 'white',
                               borderRadius: '50%',
                               transition: 'left 0.2s',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '10px',
+                              fontSize: '9px',
                               fontWeight: '700',
                               color: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981'
                             }}>
@@ -2805,20 +2821,21 @@ function App() {
                         </div>
                         <input
                           type="number"
-                          step="0.01"
-                          value={strikeData.buyLtp}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                          placeholder="LTP"
+                          step="1"
+                          value={strikeData.buyLots}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                          placeholder="Lots"
                           style={{
                             flex: '1 1 0',
-                            fontSize: '14px',
+                            minWidth: '80px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
                             border: 'none',
                             borderRight: '1px solid #E5E7EB',
-                            padding: '0 16px',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -2830,19 +2847,21 @@ function App() {
                         />
                         <input
                           type="number"
-                          step="1"
-                          value={strikeData.buyLots}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                          placeholder="Lots"
+                          step="0.01"
+                          value={strikeData.buyLtp}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="LTP"
                           style={{
-                            flex: '0 0 80px',
-                            fontSize: '14px',
+                            flex: '1 1 0',
+                            minWidth: '100px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
                             border: 'none',
-                            padding: '0 16px',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -2891,7 +2910,8 @@ function App() {
                           placeholder="Strike"
                           style={{
                             flex: '1 1 0',
-                            fontSize: '14px',
+                            minWidth: '100px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
@@ -2899,7 +2919,7 @@ function App() {
                             border: 'none',
                             borderLeft: '1px solid #E5E7EB',
                             borderRight: '1px solid #E5E7EB',
-                            padding: '0 16px',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -2911,7 +2931,7 @@ function App() {
                         />
                         {/* PE/CE Switch */}
                         <div style={{
-                          flex: '0 0 60px',
+                          flex: '0 0 55px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2923,10 +2943,10 @@ function App() {
                             onClick={() => setStrikeData(prev => ({ ...prev, sellOptionType: prev.sellOptionType === 'PE' ? 'CE' : 'PE' }))}
                             style={{
                               position: 'relative',
-                              width: '48px',
-                              height: '26px',
+                              width: '44px',
+                              height: '24px',
                               backgroundColor: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981',
-                              borderRadius: '14px',
+                              borderRadius: '12px',
                               border: 'none',
                               cursor: 'pointer',
                               transition: 'background-color 0.2s',
@@ -2936,16 +2956,16 @@ function App() {
                             <span style={{
                               position: 'absolute',
                               top: '2px',
-                              left: strikeData.sellOptionType === 'PE' ? '2px' : '24px',
-                              width: '22px',
-                              height: '22px',
+                              left: strikeData.sellOptionType === 'PE' ? '2px' : '22px',
+                              width: '20px',
+                              height: '20px',
                               backgroundColor: 'white',
                               borderRadius: '50%',
                               transition: 'left 0.2s',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '10px',
+                              fontSize: '9px',
                               fontWeight: '700',
                               color: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981'
                             }}>
@@ -2955,20 +2975,21 @@ function App() {
                         </div>
                         <input
                           type="number"
-                          step="0.01"
-                          value={strikeData.sellLtp}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                          placeholder="LTP"
+                          step="1"
+                          value={strikeData.sellLots}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                          placeholder="Lots"
                           style={{
                             flex: '1 1 0',
-                            fontSize: '14px',
+                            minWidth: '80px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
                             border: 'none',
                             borderRight: '1px solid #E5E7EB',
-                            padding: '0 16px',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -2980,19 +3001,21 @@ function App() {
                         />
                         <input
                           type="number"
-                          step="1"
-                          value={strikeData.sellLots}
-                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                          placeholder="Lots"
+                          step="0.01"
+                          value={strikeData.sellLtp}
+                          onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                          placeholder="LTP"
                           style={{
-                            flex: '0 0 80px',
-                            fontSize: '14px',
+                            flex: '1 1 0',
+                            minWidth: '100px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Inter, sans-serif',
                             color: '#000',
                             backgroundColor: 'white',
                             border: 'none',
-                            padding: '0 16px',
+                            borderRight: '1px solid #E5E7EB',
+                            padding: '0 6px',
                             outline: 'none'
                           }}
                           onFocus={(e) => {
@@ -4050,7 +4073,8 @@ function App() {
                         placeholder="Strike"
                         style={{
                           flex: '1 1 0',
-                          fontSize: '14px',
+                          minWidth: '100px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
@@ -4058,7 +4082,7 @@ function App() {
                           border: 'none',
                           borderLeft: '1px solid #E5E7EB',
                           borderRight: '1px solid #E5E7EB',
-                          padding: '0 16px',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {
@@ -4070,7 +4094,7 @@ function App() {
                       />
                       {/* PE/CE Switch */}
                       <div style={{
-                        flex: '0 0 60px',
+                        flex: '0 0 55px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -4082,10 +4106,10 @@ function App() {
                           onClick={() => setStrikeData(prev => ({ ...prev, buyOptionType: prev.buyOptionType === 'PE' ? 'CE' : 'PE' }))}
                           style={{
                             position: 'relative',
-                            width: '48px',
-                            height: '26px',
+                            width: '44px',
+                            height: '24px',
                             backgroundColor: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981',
-                            borderRadius: '14px',
+                            borderRadius: '12px',
                             border: 'none',
                             cursor: 'pointer',
                             transition: 'background-color 0.2s',
@@ -4095,16 +4119,16 @@ function App() {
                           <span style={{
                             position: 'absolute',
                             top: '2px',
-                            left: strikeData.buyOptionType === 'PE' ? '2px' : '24px',
-                            width: '22px',
-                            height: '22px',
+                            left: strikeData.buyOptionType === 'PE' ? '2px' : '22px',
+                            width: '20px',
+                            height: '20px',
                             backgroundColor: 'white',
                             borderRadius: '50%',
                             transition: 'left 0.2s',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '10px',
+                            fontSize: '9px',
                             fontWeight: '700',
                             color: strikeData.buyOptionType === 'PE' ? '#EF4444' : '#10B981'
                           }}>
@@ -4114,20 +4138,21 @@ function App() {
                       </div>
                       <input
                         type="number"
-                        step="0.01"
-                        value={strikeData.buyLtp}
-                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                        placeholder="LTP"
+                        step="1"
+                        value={strikeData.buyLots}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                        placeholder="Lots"
                         style={{
                           flex: '1 1 0',
-                          fontSize: '14px',
+                          minWidth: '80px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
                           backgroundColor: 'white',
                           border: 'none',
                           borderRight: '1px solid #E5E7EB',
-                          padding: '0 16px',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {
@@ -4139,19 +4164,21 @@ function App() {
                       />
                       <input
                         type="number"
-                        step="1"
-                        value={strikeData.buyLots}
-                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                        placeholder="Lots"
+                        step="0.01"
+                        value={strikeData.buyLtp}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, buyLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="LTP"
                         style={{
-                          flex: '0 0 80px',
-                          fontSize: '14px',
+                          flex: '1 1 0',
+                          minWidth: '100px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
                           backgroundColor: 'white',
                           border: 'none',
-                          padding: '0 16px',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {
@@ -4200,7 +4227,8 @@ function App() {
                         placeholder="Strike"
                         style={{
                           flex: '1 1 0',
-                          fontSize: '14px',
+                          minWidth: '100px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
@@ -4208,7 +4236,7 @@ function App() {
                           border: 'none',
                           borderLeft: '1px solid #E5E7EB',
                           borderRight: '1px solid #E5E7EB',
-                          padding: '0 16px',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {
@@ -4220,7 +4248,7 @@ function App() {
                       />
                       {/* PE/CE Switch */}
                       <div style={{
-                        flex: '0 0 60px',
+                        flex: '0 0 55px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -4232,10 +4260,10 @@ function App() {
                           onClick={() => setStrikeData(prev => ({ ...prev, sellOptionType: prev.sellOptionType === 'PE' ? 'CE' : 'PE' }))}
                           style={{
                             position: 'relative',
-                            width: '48px',
-                            height: '26px',
+                            width: '44px',
+                            height: '24px',
                             backgroundColor: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981',
-                            borderRadius: '14px',
+                            borderRadius: '12px',
                             border: 'none',
                             cursor: 'pointer',
                             transition: 'background-color 0.2s',
@@ -4245,16 +4273,16 @@ function App() {
                           <span style={{
                             position: 'absolute',
                             top: '2px',
-                            left: strikeData.sellOptionType === 'PE' ? '2px' : '24px',
-                            width: '22px',
-                            height: '22px',
+                            left: strikeData.sellOptionType === 'PE' ? '2px' : '22px',
+                            width: '20px',
+                            height: '20px',
                             backgroundColor: 'white',
                             borderRadius: '50%',
                             transition: 'left 0.2s',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '10px',
+                            fontSize: '9px',
                             fontWeight: '700',
                             color: strikeData.sellOptionType === 'PE' ? '#EF4444' : '#10B981'
                           }}>
@@ -4264,20 +4292,21 @@ function App() {
                       </div>
                       <input
                         type="number"
-                        step="0.01"
-                        value={strikeData.sellLtp}
-                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                        placeholder="LTP"
+                        step="1"
+                        value={strikeData.sellLots}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                        placeholder="Lots"
                         style={{
                           flex: '1 1 0',
-                          fontSize: '14px',
+                          minWidth: '80px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
                           backgroundColor: 'white',
                           border: 'none',
                           borderRight: '1px solid #E5E7EB',
-                          padding: '0 16px',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {
@@ -4289,19 +4318,21 @@ function App() {
                       />
                       <input
                         type="number"
-                        step="1"
-                        value={strikeData.sellLots}
-                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLots: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                        placeholder="Lots"
+                        step="0.01"
+                        value={strikeData.sellLtp}
+                        onChange={(e) => setStrikeData(prev => ({ ...prev, sellLtp: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        placeholder="LTP"
                         style={{
-                          flex: '0 0 80px',
-                          fontSize: '14px',
+                          flex: '1 1 0',
+                          minWidth: '100px',
+                          fontSize: '13px',
                           fontWeight: '600',
                           fontFamily: 'Inter, sans-serif',
                           color: '#000',
                           backgroundColor: 'white',
                           border: 'none',
-                          padding: '0 16px',
+                          borderRight: '1px solid #E5E7EB',
+                          padding: '0 6px',
                           outline: 'none'
                         }}
                         onFocus={(e) => {

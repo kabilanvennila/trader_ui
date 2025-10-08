@@ -290,22 +290,21 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     allFields: Object.keys(backendTrade)
   });
   
-  // Check for P&L data in max_profit field for closed trades
-  const alternativePnLFields = ['max_profit', 'profit_loss', 'pnl', 'profit', 'loss', 'actual_pnl'];
+  // Check for P&L data - for closed trades, check multiple possible fields
   let actualPnLValue = backendTrade.actual_pnl;
   
-  // For closed trades, check max_profit first as it contains the actual P&L
-  if (backendTrade.status === 'CLOSED' && backendTrade.max_profit) {
-    console.log(`🔍 Found actual P&L in max_profit field:`, backendTrade.max_profit);
-    actualPnLValue = backendTrade.max_profit;
-  } else {
-    // For other cases, check alternative fields
-    for (const field of alternativePnLFields) {
-      if ((backendTrade as any)[field] !== undefined) {
-        console.log(`🔍 Found alternative P&L field "${field}":`, (backendTrade as any)[field]);
-        actualPnLValue = (backendTrade as any)[field];
-        break;
-      }
+  // For closed trades, check actual_pnl first, then fallback to max_profit (which contains entered P&L)
+  if (backendTrade.status === 'CLOSED') {
+    if (backendTrade.actual_pnl !== null && backendTrade.actual_pnl !== undefined && backendTrade.actual_pnl !== '0') {
+      console.log(`🔍 Found actual P&L in actual_pnl field:`, backendTrade.actual_pnl);
+      actualPnLValue = backendTrade.actual_pnl;
+    } else if (backendTrade.max_profit) {
+      // Fallback: The entered P&L might be stored in max_profit field
+      console.log(`🔍 Using max_profit as actual P&L for closed trade:`, backendTrade.max_profit);
+      actualPnLValue = backendTrade.max_profit;
+    } else {
+      console.warn(`⚠️ Closed trade ${backendTrade.id} missing P&L data`);
+      actualPnLValue = '0';
     }
   }
   
@@ -372,9 +371,13 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     },
     status: backendTrade.status.toLowerCase() as 'active' | 'closed',
     notes: backendTrade.notes || undefined,
-    actualPnL: backendTrade.status === 'CLOSED' && backendTrade.max_profit 
-      ? parseFloat(backendTrade.max_profit) 
-      : (backendTrade.actual_pnl ? parseFloat(backendTrade.actual_pnl) : undefined),
+    actualPnL: backendTrade.status === 'CLOSED' 
+      ? (backendTrade.actual_pnl && backendTrade.actual_pnl !== '0'
+          ? parseFloat(backendTrade.actual_pnl.toString())
+          : backendTrade.max_profit 
+            ? parseFloat(backendTrade.max_profit.toString())
+            : undefined)
+      : undefined,
     closingDate: backendTrade.closing_date || undefined,
     createdAt: backendTrade.created_at,
     updatedAt: backendTrade.updated_at,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Trade } from './types/api';
 import { tradeApi } from './services/api';
 import { useAppContext } from './context/AppContext';
@@ -66,6 +66,7 @@ const styles = {
 
 import { useTrades, useCalculatedMetrics } from './hooks/useTrades';
 import { useInstrumentManager } from './hooks/useMarket';
+import Header from './components/Header';
 
 // Compact number formatter for Indian numbering system
 function formatCompactNumber(value: number | string): string {
@@ -95,6 +96,9 @@ function formatCompactNumber(value: number | string): string {
 }
 
 function App() {
+  
+  // Get location state for navigation
+  const location = useLocation();
   
   // Get total capital from context
   const { totalCapital } = useAppContext();
@@ -131,6 +135,9 @@ function App() {
   
   // State for dropdown menus
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
+  // State for active page navigation
+  const [activePage, setActivePage] = useState<'dashboard' | 'closed'>('dashboard');
   
   // State for trade tabs
   const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
@@ -238,6 +245,16 @@ function App() {
       clearSearchResults();
     }
   }, [indicesSearchQuery, searchInstruments, clearSearchResults]);
+  
+  // Handle navigation from other pages to History view
+  useEffect(() => {
+    const state = location.state as { openHistory?: boolean } | null;
+    if (state?.openHistory) {
+      setActivePage('closed');
+      // Clear the state so it doesn't trigger again on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
   
   // Get filtered instruments based on search
   const filteredIndices = indicesSearchQuery.trim() ? searchedIndices : indices;
@@ -862,89 +879,12 @@ function App() {
         backgroundPosition: 'left top, right top',
         backgroundRepeat: 'no-repeat'
       }}>
-        {/* Branding Image - Edge to Edge */}
-        <div className="w-full">
-          <img 
-            src="/branding.png" 
-            alt="in the zone trader" 
-            className="w-full h-auto block"
-          />
-        </div>
-
-        {/* Header - 24px from branding */}
-        <header className="mt-6">
-          <div className="flex items-center justify-between relative">
-            {/* Green Line: from left edge to 1st vertical line - Absolute positioned */}
-            <div 
-              className="absolute left-0" 
-              style={{
-                width: 'calc(100% / 16)',
-                height: '4px',
-                backgroundColor: '#02D196',
-                top: '50%',
-                transform: 'translateY(-50%)'
-              }}
-            />
-            
-            {/* Left: Name Section */}
-            <div className="flex items-center gap-6 ml-[calc(100%/16+24px)]">
-              {/* Name: yugendran */}
-              <span 
-                className="font-normal italic"
-                style={{
-                  color: '#1E3F66',
-                  fontSize: '45px',
-                  fontFamily: 'Freehand, cursive',
-                  lineHeight: '1'
-                }}
-              >
-                yugendran
-              </span>
-            </div>
-
-            {/* Right: Navigation - Width from left edge to 6th vertical line */}
-            <nav className="flex items-center justify-around bg-white" style={{
-              width: 'calc(100% / 16 * 6 - 2px)',
-              height: '53px',
-              marginLeft: '1px',
-              marginRight: '1px',
-              borderTop: '1px dashed #DEE2E8',
-              borderBottom: '1px dashed #DEE2E8'
-            }}>
-              <button style={{
-                color: '#8E9FB2',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: '400',
-                fontSize: '16px'
-              }}>Analyse</button>
-              <Link to="/transfers" style={{
-                color: '#8E9FB2',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: '400',
-                fontSize: '16px',
-                textDecoration: 'none',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer'
-              }}>Transfers</Link>
-              <button style={{
-                color: '#8E9FB2',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: '400',
-                fontSize: '16px'
-              }}>Strategy</button>
-              <button style={{
-                color: '#8E9FB2',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: '400',
-                fontSize: '16px'
-              }}>Setup</button>
-            </nav>
-          </div>
-        </header>
+        <Header activePage={activePage} onPageChange={setActivePage} />
 
         {/* Main Content Area */}
         <main style={{ marginTop: '80px' }}>
+          {activePage === 'dashboard' && (
+          <>
           {/* Market Indices Section */}
           <section style={{ 
             borderTop: '1px solid rgba(217, 217, 217, 0.5)',
@@ -2152,6 +2092,8 @@ function App() {
             </div>
             )}
           </section>
+          </>
+          )}
         </main>
       </div>
 

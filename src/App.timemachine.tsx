@@ -158,6 +158,8 @@ function App() {
     setup: '',
     strategy: '',
     capital: '' as string | number,
+    notes: '',
+    daysToExpiry: '',
   });
   
   // Error state for field validation
@@ -285,13 +287,17 @@ function App() {
 
   const handleModifyTrade = (trade: Trade) => {
     setSelectedTradeToModify(trade);
+    console.log('🔍 Modifying trade:', trade);
+    
     // Pre-populate form with existing trade data
     setSelectedIndices(trade.instrument.name);
     setSelectedBias(trade.bias);
     setFormData({
-      setup: trade.setup.name,
-      strategy: trade.setup.type,
+      setup: trade.setup.type,
+      strategy: trade.setup.name,
       capital: parseFloat(trade.capital.value.replace(/,/g, '')) || 0,
+      notes: trade.notes || '',
+      daysToExpiry: trade.createdAt ? new Date(trade.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     });
     
     // Pre-populate strike data if available
@@ -312,6 +318,19 @@ function App() {
           sellLtp: parseFloat(sellStrike.ltp) || 0
         });
       }
+    } else {
+      // Reset strike data if no strikes available
+      setStrikeData({
+        buyStrike: 0,
+        sellStrike: 0,
+        buyOptionType: 'PE',
+        sellOptionType: 'PE',
+        buyLots: 0,
+        sellLots: 0,
+        expiryDate: new Date().toISOString().split('T')[0],
+        buyLtp: 0,
+        sellLtp: 0
+      });
     }
     
     setIsModifyTradeOpen(true);
@@ -351,9 +370,11 @@ function App() {
     }
 
     try {
-      // Create strikes data if strategy requires it
+      // Always create strikes data - include all strike information regardless of strategy
       let strikes: any[] = [];
-      if (shouldShowStrikes()) {
+      
+      // If we have strike data, use it
+      if (strikeData.buyStrike && strikeData.sellStrike) {
         strikes = [
           {
             strike_price: typeof strikeData.buyStrike === 'string' ? parseFloat(strikeData.buyStrike) || 0 : strikeData.buyStrike,
@@ -372,6 +393,16 @@ function App() {
             ltp: typeof strikeData.sellLtp === 'string' ? parseFloat(strikeData.sellLtp) || 0 : strikeData.sellLtp
           }
         ];
+      } else if (selectedTradeToModify.strikes && selectedTradeToModify.strikes.length > 0) {
+        // If no strike data in form but trade has strikes, preserve existing strikes
+        strikes = selectedTradeToModify.strikes.map((strike: any) => ({
+          strike_price: parseFloat(strike.strike_price) || 0,
+          option_type: strike.option_type || 'PE',
+          position: strike.position === 'BUY' ? 'BUY' : 'SELL',
+          lots: strike.lots || 0,
+          expiry_date: strike.expiry_date || new Date().toISOString().split('T')[0],
+          ltp: parseFloat(strike.ltp) || 0
+        }));
       }
 
       // Create data in the format expected by UpdateTradeRequest
@@ -381,7 +412,7 @@ function App() {
         bias: selectedBias as 'bullish' | 'bearish' | 'neutral',
         setup: formData.setup || 'NA',
         strategy: formData.strategy || 'NA',
-        daysToExpiry: new Date().toISOString().split('T')[0],
+        daysToExpiry: formData.daysToExpiry || new Date().toISOString().split('T')[0],
         mainLots: 0,
         pricePerUnit: 0,
         hedgeLots: 0,
@@ -389,6 +420,7 @@ function App() {
         maxProfit: 0, // Will be calculated by backend
         maxLoss: 0, // Will be calculated by backend
         capital: typeof formData.capital === 'string' ? parseFloat(formData.capital) || 0 : formData.capital,
+        notes: formData.notes || '',
         strikes: strikes
       };
 
@@ -424,6 +456,8 @@ function App() {
             setup: '',
             strategy: '',
             capital: '',
+            notes: '',
+            daysToExpiry: '',
           });
           setStrikeData({
             buyStrike: '',
@@ -659,6 +693,8 @@ function App() {
           setup: '',
           strategy: '',
           capital: '',
+          notes: '',
+          daysToExpiry: '',
         });
         setStrikeData({
           buyStrike: '',
@@ -4133,6 +4169,49 @@ function App() {
                   </div>
                 </>
               )}
+
+              {/* Notes Field */}
+              <div style={{
+                backgroundColor: 'white',
+                minHeight: '80px',
+                borderBottom: '1px solid #E5E7EB',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '20px',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <label style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Notes
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any notes about this trade..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#000',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '60px'
+                  }}
+                />
+              </div>
               </form>
             </div>
 

@@ -456,6 +456,8 @@ function App() {
             setup: '',
             strategy: '',
             capital: '',
+            notes: '',
+            daysToExpiry: '',
           });
           setStrikeData({
             buyStrike: '',
@@ -498,7 +500,7 @@ function App() {
         
         // First test if the backend is reachable
         console.log('🔍 Testing backend connectivity...');
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://trader-em8b.onrender.com/api';
         console.log('🔍 Base URL:', baseUrl);
         
         try {
@@ -691,6 +693,8 @@ function App() {
           setup: '',
           strategy: '',
           capital: '',
+          notes: '',
+          daysToExpiry: '',
         });
         setStrikeData({
           buyStrike: '',
@@ -736,7 +740,7 @@ function App() {
       console.log('📤 Sending close trade data to backend:', closeData);
       
       // Only use local server
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/trades/${selectedTradeToClose.id}/`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://trader-em8b.onrender.com/api'}/trades/${selectedTradeToClose.id}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

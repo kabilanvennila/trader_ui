@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { transferApi } from '../services/api';
+import { useTrades } from '../hooks/useTrades';
 import Header from '../components/Header';
 
 interface TransferFormData {
@@ -24,11 +25,25 @@ function Transfers() {
 
   // Get transfers from context
   const { transfers, refreshTransfers, loading } = useAppContext();
+  
+  // Get trades for P&L calculation
+  const { trades } = useTrades();
+  const closedTrades = trades.filter(t => t.status === 'closed');
 
   // Calculate totals
+  const initialCapital = 1586000; // ₹15.86L
   const totalDeposits = transfers.filter(t => t.type === 'deposit').reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawals = transfers.filter(t => t.type === 'withdrawal').reduce((sum, t) => sum + t.amount, 0);
-  const totalCapital = totalDeposits - totalWithdrawals;
+  
+  // Calculate closed P&L
+  const closedPnL = closedTrades.reduce((sum, t) => {
+    const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+    const value = parseFloat(cleanValue) || 0;
+    return sum + value;
+  }, 0);
+  
+  // Current Capital = Initial Capital + (Deposits - Withdrawals) + Closed P&L
+  const currentCapital = initialCapital + (totalDeposits - totalWithdrawals) + closedPnL;
 
   // Form handling functions
   const handleInputChange = (field: keyof TransferFormData, value: string) => {
@@ -160,7 +175,7 @@ function Transfers() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(16, 1fr)' }}>
           {/* Left: Summary Containers - 7 columns */}
           <div style={{ gridColumn: 'span 7', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-            {/* Total Capital */}
+            {/* Current Capital */}
             <div style={{
               backgroundColor: '#F9FAFB',
               padding: '40px',
@@ -172,11 +187,32 @@ function Transfers() {
               height: '180px'
             }}>
               <div style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'Inter, sans-serif', color: '#1E3F66' }}>
-                Total Capital
+                Current Capital
               </div>
               <div>
                 <div style={{ fontSize: '45px', fontWeight: '900', fontFamily: 'Inter Tight, sans-serif', color: '#1E3F66', lineHeight: '1.2' }}>
-                  ₹{totalCapital.toLocaleString('en-IN')}
+                  ₹{currentCapital.toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Initial Capital */}
+            <div style={{
+              backgroundColor: 'white',
+              padding: '40px',
+              boxSizing: 'border-box',
+              borderBottom: '1px solid rgba(217, 217, 217, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: '180px'
+            }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'Inter, sans-serif', color: '#1E3F66' }}>
+                Initial Capital
+              </div>
+              <div>
+                <div style={{ fontSize: '45px', fontWeight: '900', fontFamily: 'Inter Tight, sans-serif', color: '#1E3F66', lineHeight: '1.2' }}>
+                  ₹{initialCapital.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>

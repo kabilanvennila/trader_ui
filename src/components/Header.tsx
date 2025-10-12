@@ -62,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
             borderTop: '1px dashed #DEE2E8',
             borderBottom: '1px dashed #DEE2E8'
           }}>
-            {/* Analyse - Works as both navigation button and link */}
+            {/* Home - Works as both navigation button and link */}
             {currentPath === '/' ? (
               <button 
                 onClick={() => onPageChange?.('dashboard')}
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
                   background: 'none',
                   border: 'none',
                   textShadow: activePage === 'dashboard' ? '0 0 0.5px currentColor' : 'none'
-                }}>Analyse</button>
+                }}>Home</button>
             ) : (
               <Link to="/" style={{
                 color: '#8E9FB2',
@@ -86,7 +86,37 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer'
-              }}>Analyse</Link>
+              }}>Home</Link>
+            )}
+
+            {/* History button - works on all pages */}
+            {currentPath === '/' ? (
+              <button 
+                onClick={() => onPageChange?.('closed')}
+                style={{
+                  color: activePage === 'closed' ? '#1E3F66' : '#8E9FB2',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: '500',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  textShadow: activePage === 'closed' ? '0 0 0.5px currentColor' : 'none'
+                }}>History</button>
+            ) : (
+              <Link 
+                to="/" 
+                state={{ openHistory: true }}
+                style={{
+                  color: '#8E9FB2',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: '500',
+                  fontSize: '16px',
+                  textDecoration: 'none',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}>History</Link>
             )}
 
             <Link to="/transfers" style={{
@@ -120,36 +150,6 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
               background: 'none',
               border: 'none'
             }}>Setup</button>
-
-            {/* History button - works on all pages */}
-            {currentPath === '/' ? (
-              <button 
-                onClick={() => onPageChange?.('closed')}
-                style={{
-                  color: activePage === 'closed' ? '#1E3F66' : '#8E9FB2',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: '500',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  background: 'none',
-                  border: 'none',
-                  textShadow: activePage === 'closed' ? '0 0 0.5px currentColor' : 'none'
-                }}>History</button>
-            ) : (
-              <Link 
-                to="/" 
-                state={{ openHistory: true }}
-                style={{
-                  color: '#8E9FB2',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: '500',
-                  fontSize: '16px',
-                  textDecoration: 'none',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}>History</Link>
-            )}
           </nav>
         </div>
       </header>

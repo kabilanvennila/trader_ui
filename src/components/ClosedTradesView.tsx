@@ -1,8 +1,9 @@
-import { Trade } from '../types/api';
+import { Trade, Transfer } from '../types/api';
 
 interface ClosedTradesViewProps {
   trades: Trade[];
   totalCapital: number;
+  transfers: Transfer[];
   formatCompactNumber: (value: string) => string;
   styles: any;
   openMenuId: string | null;
@@ -17,6 +18,7 @@ interface ClosedTradesViewProps {
 const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
   trades,
   totalCapital,
+  transfers,
   formatCompactNumber,
   styles,
   openMenuId,
@@ -41,27 +43,30 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
       }}>
         <div style={{ marginBottom: '32px' }}>
           <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '8px' }}>
-            Account Value
+            Current Capital
           </div>
           {(() => {
-            // Calculate closed P&L
+            const initialCapital = 1586000; // ₹15.86L
             const closedPnL = closedTrades.reduce((sum, t) => {
-              const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
-              return sum + (t.profitLoss.isProfit ? value : -value);
+              const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+              const value = parseFloat(cleanValue) || 0;
+              return sum + value;
             }, 0);
-            const totalCapitalWithPnL = totalCapital + closedPnL;
+            // Current Capital = Initial Capital + Transfer Capital + Closed P&L
+            const currentCapital = initialCapital + totalCapital + closedPnL;
             
             // Calculate deployed capital for closed trades
             const closedDeployedCapital = closedTrades.reduce((sum, t) => {
               return sum + parseFloat(t.capital.value.replace(/[₹,]/g, ''));
             }, 0);
             
+            // Use Return on Deployed Capital - accurate trading performance
             const percentageReturn = closedDeployedCapital > 0 ? ((closedPnL / closedDeployedCapital) * 100) : 0;
             
             return (
               <>
                 <div style={{ fontSize: '40px', fontWeight: '700', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>
-                  ₹{formatCompactNumber(totalCapitalWithPnL.toLocaleString('en-IN'))}
+                  ₹{formatCompactNumber(currentCapital.toLocaleString('en-IN'))}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px', color: closedPnL >= 0 ? '#10B981' : '#EF4444' }}>{closedPnL >= 0 ? '▲' : '▼'}</span>
@@ -77,26 +82,81 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
         
         {/* Simple Line Chart */}
         <div style={{ position: 'relative', height: '280px', width: 'calc(100% + 80px)', marginLeft: '-40px', marginRight: '-40px', marginBottom: '16px' }}>
+          {/* Y-axis labels - positioned absolutely */}
+          <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', width: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: '10px', paddingBottom: '10px' }}>
+            {(() => {
+              const initialCapital = 1586000;
+              const transferCapital = transfers.reduce((sum, t) => {
+                return sum + (t.type === 'deposit' ? t.amount : -t.amount);
+              }, 0);
+              let cumulativeReturn = 0;
+              let runningCapital = initialCapital + transferCapital;
+              const sortedTrades = [...closedTrades];
+              
+              sortedTrades.forEach(trade => {
+                const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                const tradePnL = parseFloat(cleanValue) || 0;
+                const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
+                cumulativeReturn += tradeReturnPercent;
+                runningCapital += tradePnL;
+              });
+              
+              const maxReturn = Math.max(0, cumulativeReturn);
+              const minReturn = Math.min(0, cumulativeReturn);
+              const labels = [];
+              
+              // Create 5 labels from max to min
+              for (let i = 0; i < 5; i++) {
+                const value = maxReturn - (i * (maxReturn - minReturn) / 4);
+                labels.push(
+                  <div key={i} style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'Inter, sans-serif', textAlign: 'right', paddingRight: '8px' }}>
+                    {value >= 0 ? '+' : ''}{value.toFixed(1)}%
+                  </div>
+                );
+              }
+              return labels;
+            })()}
+          </div>
+          
           <svg width="100%" height="100%" viewBox="0 0 1000 280" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
             
-            {/* Growth line - Based on actual trade dates and values */}
+            {/* Growth line - Based on cumulative percentage return */}
             {(() => {
-              const startingCapital = totalCapital;
+              const initialCapital = 1586000; // ₹15.86L
+              
+              // Calculate total transfer capital
+              const transferCapital = transfers.reduce((sum, t) => {
+                return sum + (t.type === 'deposit' ? t.amount : -t.amount);
+              }, 0);
+              
               const startDate = new Date(2025, 9, 1); // Oct 1, 2025
               const endDate = new Date(2026, 2, 31); // March 31, 2026
               const timeRange = endDate.getTime() - startDate.getTime();
               
-              // Build data points with actual dates and running capital
-              let runningCapital = startingCapital;
-              const dataPoints = [{ x: 0, y: startingCapital }];
+              // Build data points with cumulative percentage return
+              let cumulativeReturn = 0;
+              let runningCapital = initialCapital + transferCapital;
+              const dataPoints = [{ x: 0, y: 0 }]; // Start at 0% return
               
               if (closedTrades.length > 0) {
+                // Use trades in their existing order (they should be sorted by date from API)
+                const sortedTrades = [...closedTrades];
+                
                 // Spread trades between Oct 1 and Oct 7 (today)
                 const tradingDays = 6; // Oct 1 to Oct 7
-                const daysPerTrade = tradingDays / closedTrades.length;
+                const daysPerTrade = tradingDays / sortedTrades.length;
                 
-                closedTrades.forEach((trade, index) => {
-                  const tradePnL = parseFloat(trade.profitLoss.value.replace(/[₹,+-]/g, '')) * (trade.profitLoss.isProfit ? 1 : -1);
+                sortedTrades.forEach((trade, index) => {
+                  const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                  const tradePnL = parseFloat(cleanValue) || 0;
+                  
+                  // Calculate this trade's return as % of capital at the time
+                  const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
+                  
+                  // Add to cumulative return percentage
+                  cumulativeReturn += tradeReturnPercent;
+                  
+                  // Update running capital for next trade
                   runningCapital += tradePnL;
                   
                   // Place trade between Oct 1 and Oct 7
@@ -104,103 +164,98 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                   const tradeDate = new Date(startDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
                   const xPosition = (tradeDate.getTime() - startDate.getTime()) / timeRange;
                   
-                  dataPoints.push({ x: xPosition, y: runningCapital });
+                  dataPoints.push({ x: xPosition, y: cumulativeReturn });
                 });
               } else {
-                // If no closed trades, just show flat line at start
-                dataPoints.push({ x: 0.01, y: startingCapital });
+                // If no closed trades, just show flat line at 0%
+                dataPoints.push({ x: 0.01, y: 0 });
               }
               
-              const minY = Math.min(...dataPoints.map(p => p.y));
-              const maxY = Math.max(...dataPoints.map(p => p.y));
+              // Y-axis shows cumulative percentage return
+              const minY = Math.min(...dataPoints.map(p => p.y), 0);
+              const maxY = Math.max(...dataPoints.map(p => p.y), 0);
               const range = maxY - minY || 1;
               
-              // Calculate baseline Y position (starting capital)
-              const baselineY = 280 - ((startingCapital - minY) / range) * 260 - 10;
-              
-              const pathData = dataPoints.map((point, i) => {
-                const x = point.x * 1000;
-                const y = 280 - ((point.y - minY) / range) * 260 - 10;
-                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-              }).join(' ');
-              
-              // Create area fill path with baseline
-              const lastPoint = dataPoints[dataPoints.length - 1];
-              const lastX = lastPoint.x * 1000;
-              const areaPath = `${pathData} L ${lastX} ${baselineY} L 0 ${baselineY} Z`;
+              // Calculate baseline Y position (0% return baseline)
+              const baselineY = 280 - ((0 - minY) / range) * 260 - 10;
               
               return (
                 <>
-                  <defs>
-                    {/* Positive gradient (green) */}
-                    <linearGradient id="positiveGradientHistory" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: '#10B981', stopOpacity: 0.3 }} />
-                      <stop offset="100%" style={{ stopColor: '#10B981', stopOpacity: 0.05 }} />
-                    </linearGradient>
-                    {/* Negative gradient (red) */}
-                    <linearGradient id="negativeGradientHistory" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: '#EF4444', stopOpacity: 0.05 }} />
-                      <stop offset="100%" style={{ stopColor: '#EF4444', stopOpacity: 0.3 }} />
-                    </linearGradient>
-                    
-                    {/* Clip path for positive area (above baseline) */}
-                    <clipPath id="positiveClipHistory">
-                      <rect x="0" y="0" width="1000" height={baselineY} />
-                    </clipPath>
-                    
-                    {/* Clip path for negative area (below baseline) */}
-                    <clipPath id="negativeClipHistory">
-                      <rect x="0" y={baselineY} width="1000" height={280 - baselineY} />
-                    </clipPath>
-                  </defs>
-                  
-                  {/* Positive area fill (above baseline) */}
-                  <path 
-                    d={areaPath} 
-                    fill="url(#positiveGradientHistory)" 
-                    clipPath="url(#positiveClipHistory)"
-                  />
-                  
-                  {/* Negative area fill (below baseline) */}
-                  <path 
-                    d={areaPath} 
-                    fill="url(#negativeGradientHistory)" 
-                    clipPath="url(#negativeClipHistory)"
-                  />
-                  
-                  {/* Baseline (starting capital) - subtle line */}
+                  {/* Baseline (0% return) - prominent line */}
                   <line 
                     x1="0" 
                     y1={baselineY} 
-                    x2={lastX} 
+                    x2="1000" 
                     y2={baselineY} 
-                    stroke="#D1D5DB" 
-                    strokeWidth="1" 
-                    strokeDasharray="4 4"
-                    opacity="0.5"
+                    stroke="#374151" 
+                    strokeWidth="2" 
+                    strokeDasharray="8 4"
+                    opacity="0.4"
                   />
                   
-                  {/* Line stroke - green above baseline */}
-                  <path 
-                    d={pathData} 
-                    stroke="#10B981" 
-                    strokeWidth="2" 
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    clipPath="url(#positiveClipHistory)"
-                  />
+                  {/* Draw line segments with colors based on whether above/below 0% */}
+                  {dataPoints.map((point, i) => {
+                    if (i === 0) return null;
+                    const prevPoint = dataPoints[i - 1];
+                    
+                    // Determine color: green if going up OR above zero, red if going down OR below zero
+                    let segmentColor;
+                    if (point.y > prevPoint.y && point.y > 0) {
+                      // Going up and above baseline
+                      segmentColor = '#10B981'; // Green
+                    } else if (point.y > prevPoint.y && point.y <= 0) {
+                      // Going up but still below baseline
+                      segmentColor = '#FFA500'; // Orange (recovering)
+                    } else if (point.y <= prevPoint.y && point.y >= 0) {
+                      // Going down but still above baseline  
+                      segmentColor = '#FFA500'; // Orange (declining from profit)
+                    } else {
+                      // Going down and below baseline
+                      segmentColor = '#EF4444'; // Red
+                    }
+                    
+                    const x1 = prevPoint.x * 1000;
+                    const y1 = 280 - ((prevPoint.y - minY) / range) * 260 - 10;
+                    const x2 = point.x * 1000;
+                    const y2 = 280 - ((point.y - minY) / range) * 260 - 10;
+                    
+                    console.log(`Segment ${i}: from ${prevPoint.y.toFixed(2)}% to ${point.y.toFixed(2)}%, color: ${segmentColor}`);
+                    
+                    return (
+                      <line
+                        key={i}
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke={segmentColor}
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    );
+                  })}
                   
-                  {/* Line stroke - red below baseline */}
-                  <path 
-                    d={pathData} 
-                    stroke="#EF4444" 
-                    strokeWidth="2" 
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    clipPath="url(#negativeClipHistory)"
-                  />
+                  {/* Area fill - green above baseline, red below */}
+                  {dataPoints.map((point, i) => {
+                    if (i === 0) return null;
+                    const prevPoint = dataPoints[i - 1];
+                    const x1 = prevPoint.x * 1000;
+                    const y1 = 280 - ((prevPoint.y - minY) / range) * 260 - 10;
+                    const x2 = point.x * 1000;
+                    const y2 = 280 - ((point.y - minY) / range) * 260 - 10;
+                    
+                    const areaPath = `M ${x1} ${y1} L ${x2} ${y2} L ${x2} ${baselineY} L ${x1} ${baselineY} Z`;
+                    const fillColor = point.y >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    
+                    return (
+                      <path
+                        key={`area-${i}`}
+                        d={areaPath}
+                        fill={fillColor}
+                      />
+                    );
+                  })}
                 </>
               );
             })()}
@@ -245,8 +300,9 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           {/* Box 1: Total Profit/Loss */}
           <div style={{ width: 'calc((100% - 3px) / 4)', backgroundColor: (() => {
             const closedPnL = closedTrades.reduce((sum, t) => {
-              const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
-              return sum + (t.profitLoss.isProfit ? value : -value);
+              const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+              const value = parseFloat(cleanValue) || 0;
+              return sum + value;
             }, 0);
             return closedPnL >= 0 ? '#D1FAE5' : '#FEE2E2';
           })(), boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -254,22 +310,63 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               <div style={styles.contentAnchor}>Total Profit / Loss</div>
               <div>
                 {(() => {
-                  const closedPnL = closedTrades.reduce((sum, t) => {
-                    const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
-                    return sum + (t.profitLoss.isProfit ? value : -value);
+                  const initialCapital = 1586000;
+                  
+                  // Calculate total transfer capital (deposits - withdrawals)
+                  const transferCapital = transfers.reduce((sum, t) => {
+                    return sum + (t.type === 'deposit' ? t.amount : -t.amount);
                   }, 0);
-                  const closedDeployedCapital = closedTrades.reduce((sum, t) => {
-                    return sum + parseFloat(t.capital.value.replace(/[₹,]/g, ''));
+                  
+                  // Calculate cumulative return considering capital at each trade
+                  let cumulativeReturn = 0;
+                  // Starting capital = Initial + All Transfers
+                  let runningCapital = initialCapital + transferCapital;
+                  
+                  // Sort trades by date (assuming they come in chronological order)
+                  const sortedTrades = [...closedTrades];
+                  
+                  sortedTrades.forEach(trade => {
+                    // Get P&L for this trade
+                    const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                    const tradePnL = parseFloat(cleanValue) || 0;
+                    
+                    // Calculate this trade's return as % of capital available at the time
+                    const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
+                    
+                    // Add to cumulative return
+                    cumulativeReturn += tradeReturnPercent;
+                    
+                    // Update running capital for next trade
+                    runningCapital += tradePnL;
+                  });
+                  
+                  const closedPnL = sortedTrades.reduce((sum, t) => {
+                    const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                    const value = parseFloat(cleanValue) || 0;
+                    return sum + value;
                   }, 0);
-                  const percentageReturn = closedDeployedCapital > 0 ? ((closedPnL / closedDeployedCapital) * 100) : 0;
+                  
+                  // Return on Initial Capital - shows overall account growth
+                  const returnOnInitial = ((closedPnL / initialCapital) * 100);
                   
                   return (
                     <>
                       <div style={styles.mainNumber}>
-                        {formatCompactNumber((closedPnL >= 0 ? '+₹' : '-₹') + Math.abs(closedPnL).toLocaleString('en-IN'))}
+                        {closedPnL >= 0 ? '+' : '-'}₹{formatCompactNumber(Math.abs(closedPnL).toLocaleString('en-IN'))}
                       </div>
-                      <div style={{ ...styles.percentage, marginTop: '12px', color: closedPnL >= 0 ? '#10B981' : '#EF4444' }}>
-                        {Math.abs(percentageReturn).toFixed(1)}%
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '12px', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '10px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>Cumulative</div>
+                          <div style={{ ...styles.percentage, color: cumulativeReturn >= 0 ? '#10B981' : '#EF4444' }}>
+                            {cumulativeReturn >= 0 ? '+' : ''}{cumulativeReturn.toFixed(2)}%
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '10px', color: '#6B7280', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>On Initial</div>
+                          <div style={{ ...styles.percentage, color: closedPnL >= 0 ? '#10B981' : '#EF4444' }}>
+                            {returnOnInitial >= 0 ? '+' : ''}{returnOnInitial.toFixed(2)}%
+                          </div>
+                        </div>
                       </div>
                     </>
                   );

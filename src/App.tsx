@@ -101,8 +101,8 @@ function App() {
   // Get location state for navigation
   const location = useLocation();
   
-  // Get total capital from context
-  const { totalCapital } = useAppContext();
+  // Get total capital and transfers from context
+  const { totalCapital, transfers } = useAppContext();
   
   // API hooks for data fetching
   const { trades, loading: tradesLoading, error: tradesError, refetch: refetchTrades } = useTrades();
@@ -1203,18 +1203,20 @@ function App() {
                 <div style={{ width: `calc((100% - ${activeTab === 'active' ? '2px' : '3px'}) / 4)`, backgroundColor: 'white', boxSizing: 'border-box', overflow: 'hidden', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
                   <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
                     
-                    {/* Row 1: Total Capital or Total Trades */}
+                    {/* Row 1: Current Capital or Total Trades */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={styles.section4Label}>{activeTab === 'active' ? 'Total Capital' : 'Total Trades'}</div>
+                      <div style={styles.section4Label}>{activeTab === 'active' ? 'Current Capital' : 'Total Trades'}</div>
                       <div style={styles.mainNumberSmall}>
                         {activeTab === 'active' ? (() => {
-                          // Total Capital = Transfer Capital + Closed Trades P&L
+                          // Current Capital = Initial Capital + Transfer Capital + Closed Trades P&L
+                          const initialCapital = 1586000;
                           const closedTrades = trades.filter(t => t.status === 'closed');
                           const closedPnL = closedTrades.reduce((sum, t) => {
-                            const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
-                            return sum + (t.profitLoss.isProfit ? value : -value);
+                            const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                            const value = parseFloat(cleanValue) || 0;
+                            return sum + value;
                           }, 0);
-                          return formatCompactNumber((totalCapital + closedPnL).toLocaleString('en-IN'));
+                          return formatCompactNumber((initialCapital + totalCapital + closedPnL).toLocaleString('en-IN'));
                         })() : metrics.totalTrades}
                       </div>
                     </div>
@@ -1671,6 +1673,7 @@ function App() {
             <ClosedTradesView
               trades={trades}
               totalCapital={totalCapital}
+              transfers={transfers}
               formatCompactNumber={formatCompactNumber}
               styles={styles}
               openMenuId={openMenuId}

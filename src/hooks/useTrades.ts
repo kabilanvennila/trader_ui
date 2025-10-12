@@ -211,7 +211,7 @@ export function useCalculatedMetrics(trades: Trade[]) {
     const totalMaxProfit = trades.reduce((sum, trade) => {
       // Handle currency formatting and symbols
       const cleanValue = trade.maxProfit.value.replace(/[₹,]/g, '');
-      const value = parseFloat(cleanValue) || 0;
+      const value = Math.abs(parseFloat(cleanValue) || 0); // Ensure max profit is always positive
       console.log('🔍 Dashboard Max Profit calculation:', {
         original: trade.maxProfit.value,
         cleaned: cleanValue,

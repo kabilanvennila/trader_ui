@@ -1,7 +1,7 @@
 import { BackendTrade, Trade } from '../types/api';
 
 // Calculate max profit based on strikes and instrument
-function calculateMaxProfitFromStrikes(strikes: any[], instrument: string): number {
+function calculateMaxProfitFromStrikes(strikes: any[], instrument: string, strategy?: string): number {
   if (!strikes || strikes.length < 2) return 0;
   
   // Find buy and sell strikes
@@ -13,20 +13,32 @@ function calculateMaxProfitFromStrikes(strikes: any[], instrument: string): numb
   // Get multiplier based on instrument
   const getMultiplier = (instrument: string): number => {
     const upperInstrument = instrument.toUpperCase();
-    if (upperInstrument.includes('NIFTY')) return 75;
     if (upperInstrument.includes('BANKNIFTY')) return 35;
+    if (upperInstrument.includes('MIDCPNIFTY')) return 140;
+    if (upperInstrument.includes('NIFTY')) return 75;
     if (upperInstrument.includes('SENSEX')) return 20;
     return 1; // Default multiplier
   };
   
-  // Calculate: (sell strike ltp - buy strike ltp) * lots * multiplier
   const buyLtp = parseFloat(buyStrike.ltp) || 0;
   const sellLtp = parseFloat(sellStrike.ltp) || 0;
   const lots = parseInt(buyStrike.lots) || 0;
   const multiplier = getMultiplier(instrument);
   
-  const maxProfit = (sellLtp - buyLtp) * lots * multiplier;
-  return maxProfit; // Return the actual calculated max profit (can be negative)
+  let maxProfit: number;
+  
+  if (strategy === 'Bear call spread') {
+    // Bear call spread max profit: (Sell price - buy price) * lots * multiplier
+    maxProfit = (sellLtp - buyLtp) * lots * multiplier;
+  } else if (strategy === 'Bull put spread') {
+    // Bull put spread max profit: (Sell price - buy price) * lots * multiplier
+    maxProfit = (sellLtp - buyLtp) * lots * multiplier;
+  } else {
+    // Default calculation for other strategies
+    maxProfit = (sellLtp - buyLtp) * lots * multiplier;
+  }
+  
+  return Math.abs(maxProfit); // Ensure max profit is always positive by taking absolute value
 }
 
 // Calculate max loss based on strikes and instrument
@@ -61,9 +73,10 @@ function calculateQuantityFromLots(strikes: any[], fallbackLots: number, instrum
   const getMultiplier = (instrument: string): number => {
     const upperInstrument = instrument.toUpperCase();
     if (upperInstrument.includes('NIFTY')) return 75;
-    if (upperInstrument.includes('BANKNIFTY')) return 30;
+    if (upperInstrument.includes('BANKNIFTY')) return 35;
     if (upperInstrument.includes('FINNIFTY')) return 40;
-    if (upperInstrument.includes('SENSEX')) return 10;
+    if (upperInstrument.includes('SENSEX')) return 20;
+    if (upperInstrument.includes('MIDCPNIFTY')) return 140;
     return 1;
   };
   
@@ -95,8 +108,9 @@ function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strateg
   // Get multiplier based on instrument
   const getMultiplier = (instrument: string): number => {
     const upperInstrument = instrument.toUpperCase();
-    if (upperInstrument.includes('NIFTY')) return 75;
     if (upperInstrument.includes('BANKNIFTY')) return 35;
+    if (upperInstrument.includes('MIDCPNIFTY')) return 140;
+    if (upperInstrument.includes('NIFTY')) return 75;
     if (upperInstrument.includes('SENSEX')) return 20;
     return 1; // Default multiplier
   };
@@ -113,9 +127,10 @@ function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strateg
   
   // Calculate based on strategy
   if (strategy === 'Bull put spread') {
-    // Bull put spread: (sell strike - buy strike - ltp diff) * lots * 75
+    // Bull put spread: ((Sell strike - buy strike) - (sell price - buy price)) * lots * multiplier
     const strikeDiff = sellStrikePrice - buyStrikePrice;
-    maxLoss = (strikeDiff - ltpDiff) * lots * 75;
+    const priceDiff = sellLtp - buyLtp; // sell price - buy price
+    maxLoss = (strikeDiff - priceDiff) * lots * multiplier;
     
     console.log('🔍 Bull Put Spread Max Loss Calculation:', {
       buyStrikePrice,
@@ -123,16 +138,18 @@ function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strateg
       buyLtp,
       sellLtp,
       lots,
+      multiplier,
       strikeDiff,
-      ltpDiff,
-      calculation: `${strikeDiff} - ${ltpDiff} = ${strikeDiff - ltpDiff}`,
-      finalCalculation: `${strikeDiff - ltpDiff} * ${lots} * 75`,
+      priceDiff,
+      calculation: `${strikeDiff} - ${priceDiff} = ${strikeDiff - priceDiff}`,
+      finalCalculation: `${strikeDiff - priceDiff} * ${lots} * ${multiplier}`,
       maxLoss
     });
   } else if (strategy === 'Bear call spread') {
-    // Bear call spread: ((buy strike - sell strike) - (ltp diff)) * lots * multiplier
+    // Bear call spread: ((Buy strike - sell strike) - (sell price - buy price)) * lots * multiplier
     const strikeDiff = buyStrikePrice - sellStrikePrice;
-    maxLoss = (strikeDiff - ltpDiff) * lots * multiplier;
+    const priceDiff = sellLtp - buyLtp; // sell price - buy price
+    maxLoss = (strikeDiff - priceDiff) * lots * multiplier;
     
     console.log('🔍 Bear Call Spread Max Loss Calculation:', {
       buyStrikePrice,
@@ -142,7 +159,7 @@ function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strateg
       lots,
       multiplier,
       strikeDiff,
-      ltpDiff,
+      priceDiff,
       maxLoss
     });
   } else {
@@ -169,7 +186,7 @@ function calculateMaxLossFromStrikes(strikes: any[], instrument: string, strateg
     isNegative: maxLoss < 0
   });
   
-  return maxLoss; // Return the actual calculated max loss (can be negative)
+  return Math.abs(maxLoss); // Ensure max loss is always positive by taking absolute value
 }
 
 // Transform backend trade data to frontend format
@@ -208,8 +225,8 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
   };
   
   // Calculate profit/loss - use calculated max profit and max loss if strikes are available
-  let maxProfitNum = parseFloat(backendTrade.max_profit) || 0;
-  let maxLossNum = parseFloat(backendTrade.max_loss) || 0;
+  let maxProfitNum = Math.abs(parseFloat(backendTrade.max_profit) || 0);
+  let maxLossNum = Math.abs(parseFloat(backendTrade.max_loss) || 0);
   const capitalNum = parseFloat(backendTrade.capital) || 0;
   
   // If we have strikes, calculate max profit and max loss from strike data
@@ -219,7 +236,7 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
     console.log('🔍 Calculating from strikes, count:', transformedStrikes.length);
     console.log('🔍 Transformed strikes:', transformedStrikes);
     
-    const calculatedMaxProfit = calculateMaxProfitFromStrikes(transformedStrikes, backendTrade.indices_stock);
+    const calculatedMaxProfit = calculateMaxProfitFromStrikes(transformedStrikes, backendTrade.indices_stock, backendTrade.strategy);
     const calculatedMaxLoss = calculateMaxLossFromStrikes(transformedStrikes, backendTrade.indices_stock, backendTrade.strategy);
     
     console.log('🔍 Calculated values:', {
@@ -238,6 +255,7 @@ export function transformBackendTrade(backendTrade: BackendTrade): Trade {
       if (upperInstrument.includes('NIFTY')) return 75;
       if (upperInstrument.includes('BANKNIFTY')) return 35;
       if (upperInstrument.includes('SENSEX')) return 20;
+      if (upperInstrument.includes('MIDCPNIFTY')) return 140;
       return 1;
     };
     

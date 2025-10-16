@@ -38,18 +38,20 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
           
           {/* Left: Name Section */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginLeft: 'calc(100% / 16 + 24px)' }}>
-            {/* Name: yugendran */}
+            {/* Name: yugu */}
             <span 
               style={{
                 color: '#1E3F66',
                 fontSize: '45px',
-                fontFamily: 'Freehand, cursive',
+                fontFamily: '"Seaweed Script", cursive',
                 lineHeight: '1',
                 fontWeight: 'normal',
-                fontStyle: 'italic'
+                fontStyle: 'normal',
+                transform: 'translateY(-8px)',
+                display: 'inline-block'
               }}
             >
-              yugendran
+              yugu
             </span>
           </div>
 

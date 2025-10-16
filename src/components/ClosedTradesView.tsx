@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Trade, Transfer } from '../types/api';
 
 interface ClosedTradesViewProps {
@@ -31,228 +32,258 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
 }) => {
   // Filter only closed trades
   const closedTrades = trades.filter(t => t.status === 'closed');
+  
+  // State for tracking hovered bar
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const [hoveredBarData, setHoveredBarData] = useState<{x: number, y: number, value: string, isPositive: boolean} | null>(null);
+
+  // Styles for chart section
+  const chartStyles = {
+    caption: {
+      fontSize: '14px',
+      fontFamily: 'Inter, sans-serif',
+      color: '#1E3F66',
+      opacity: 0.5,
+      marginBottom: '8px'
+    },
+    data: {
+      fontSize: '32px',
+      fontFamily: 'Inter Tight, sans-serif',
+      fontWeight: '800',
+      color: '#1E3F66'
+    }
+  };
 
   return (
     <>
-      {/* Capital Growth Chart Section */}
+      {/* Chart Section */}
       <section style={{
-        borderBottom: '1px solid rgba(217, 217, 217, 0.5)',
+        position: 'relative',
         backgroundColor: 'transparent',
-        padding: '32px 40px 32px 40px',
-        marginBottom: '40px'
+        height: '450px',
+        marginBottom: '64px',
+        paddingLeft: '0',
+        paddingRight: '0',
+        paddingTop: '24px',
+        paddingBottom: '40px'
       }}>
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '8px' }}>
-            Current Capital
-          </div>
-          {(() => {
-            const initialCapital = 1586000; // ₹15.86L
-            const closedPnL = closedTrades.reduce((sum, t) => {
-              const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
-              const value = parseFloat(cleanValue) || 0;
-              return sum + value;
-            }, 0);
-            // Current Capital = Initial Capital + Transfer Capital + Closed P&L
-            const currentCapital = initialCapital + totalCapital + closedPnL;
-            
-            // Calculate deployed capital for closed trades
-            const closedDeployedCapital = closedTrades.reduce((sum, t) => {
-              return sum + parseFloat(t.capital.value.replace(/[₹,]/g, ''));
-            }, 0);
-            
-            // Use Return on Deployed Capital - accurate trading performance
-            const percentageReturn = closedDeployedCapital > 0 ? ((closedPnL / closedDeployedCapital) * 100) : 0;
-            
-            return (
-              <>
-                <div style={{ fontSize: '40px', fontWeight: '700', color: '#111827', fontFamily: 'Inter, sans-serif', marginBottom: '4px' }}>
-                  ₹{formatCompactNumber(currentCapital.toLocaleString('en-IN'))}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px', color: closedPnL >= 0 ? '#10B981' : '#EF4444' }}>{closedPnL >= 0 ? '▲' : '▼'}</span>
-                  <span style={{ fontSize: '16px', fontWeight: '600', color: closedPnL >= 0 ? '#10B981' : '#EF4444', fontFamily: 'Inter, sans-serif' }}>
-                    ₹{formatCompactNumber(Math.abs(closedPnL).toLocaleString('en-IN'))} ({Math.abs(percentageReturn).toFixed(2)}%)
-                  </span>
-                  <span style={{ fontSize: '14px', color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>All Time</span>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-        
-        {/* Simple Line Chart */}
-        <div style={{ position: 'relative', height: '280px', width: 'calc(100% + 80px)', marginLeft: '-40px', marginRight: '-40px', marginBottom: '16px' }}>
-          {/* Y-axis labels - positioned absolutely */}
-          <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', width: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: '10px', paddingBottom: '10px' }}>
+        {/* Total Returns Display - Container */}
+        <div style={{
+          width: 'calc(12.5% - 1px)', // 2 columns out of 16, minus 1px for grid line
+          marginLeft: '1px', // Show the left grid line
+          borderTop: '1px dashed #DEE2E8',
+          borderBottom: '1px dashed #DEE2E8',
+          padding: '24px',
+          backgroundColor: 'white'
+        }}>
+          <div style={chartStyles.caption}>Total Returns</div>
+          <div style={chartStyles.data}>
             {(() => {
               const initialCapital = 1586000;
-              const transferCapital = transfers.reduce((sum, t) => {
-                return sum + (t.type === 'deposit' ? t.amount : -t.amount);
-              }, 0);
-              let cumulativeReturn = 0;
-              let runningCapital = initialCapital + transferCapital;
-              const sortedTrades = [...closedTrades];
               
-              sortedTrades.forEach(trade => {
-                const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
-                const tradePnL = parseFloat(cleanValue) || 0;
-                const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
-                cumulativeReturn += tradeReturnPercent;
-                runningCapital += tradePnL;
+              // Parse dates for chronological ordering
+              const parseTradeDate = (trade: any) => {
+                const monthMap: {[key: string]: number} = {
+                  'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                  'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                };
+                if (trade.closingDate) return new Date(trade.closingDate);
+                if (trade.date) {
+                  const month = monthMap[trade.date.month.toUpperCase()] ?? 9;
+                  const day = parseInt(trade.date.day) || 1;
+                  return new Date(2025, month, day);
+                }
+                return new Date(2025, 9, 1);
+              };
+              
+              const parseTransferDate = (transfer: any) => {
+                const monthMap: {[key: string]: number} = {
+                  'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                  'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                };
+                const month = monthMap[transfer.date.month.toUpperCase()] ?? 9;
+                const day = parseInt(transfer.date.day) || 1;
+                return new Date(2025, month, day);
+              };
+              
+              // Build events
+              const events: Array<{type: 'trade' | 'transfer', date: Date, data: any}> = [];
+              closedTrades.forEach(trade => {
+                events.push({ type: 'trade', date: parseTradeDate(trade), data: trade });
+              });
+              transfers.forEach(transfer => {
+                events.push({ type: 'transfer', date: parseTransferDate(transfer), data: transfer });
+              });
+              events.sort((a, b) => a.date.getTime() - b.date.getTime());
+              
+              // Calculate cumulative return
+              let cumulativeReturn = 0;
+              let runningCapital = initialCapital;
+              
+              events.forEach((event) => {
+                if (event.type === 'transfer') {
+                  const amount = event.data.amount;
+                  runningCapital += event.data.type === 'deposit' ? amount : -amount;
+                } else if (event.type === 'trade') {
+                  const cleanValue = event.data.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                  const tradePnL = parseFloat(cleanValue) || 0;
+                  const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
+                  cumulativeReturn += tradeReturnPercent;
+                  runningCapital += tradePnL;
+                }
               });
               
-              const maxReturn = Math.max(0, cumulativeReturn);
-              const minReturn = Math.min(0, cumulativeReturn);
-              const labels = [];
-              
-              // Create 5 labels from max to min
-              for (let i = 0; i < 5; i++) {
-                const value = maxReturn - (i * (maxReturn - minReturn) / 4);
-                labels.push(
-                  <div key={i} style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'Inter, sans-serif', textAlign: 'right', paddingRight: '8px' }}>
-                    {value >= 0 ? '+' : ''}{value.toFixed(1)}%
-                  </div>
-                );
-              }
-              return labels;
+              return `${cumulativeReturn >= 0 ? '+' : ''}${cumulativeReturn.toFixed(2)}%`;
             })()}
           </div>
-          
-          <svg width="100%" height="100%" viewBox="0 0 1000 280" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-            
-            {/* Growth line - Based on cumulative percentage return */}
+        </div>
+
+        {/* Bar Chart - Trade Returns */}
+        <div style={{ 
+          marginTop: '40px',
+          height: '250px',
+          width: '100%',
+          position: 'relative'
+        }}>
+          <svg width="100%" height="100%" viewBox="0 0 1000 250" preserveAspectRatio="none">
             {(() => {
-              const initialCapital = 1586000; // ₹15.86L
+              // Parse dates
+              const parseTradeDate = (trade: any) => {
+                const monthMap: {[key: string]: number} = {
+                  'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                  'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                };
+                if (trade.closingDate) return new Date(trade.closingDate);
+                if (trade.date) {
+                  const month = monthMap[trade.date.month.toUpperCase()] ?? 9;
+                  const day = parseInt(trade.date.day) || 1;
+                  return new Date(2025, month, day);
+                }
+                return new Date(2025, 9, 1);
+              };
               
-              // Calculate total transfer capital
-              const transferCapital = transfers.reduce((sum, t) => {
-                return sum + (t.type === 'deposit' ? t.amount : -t.amount);
-              }, 0);
-              
-              const startDate = new Date(2025, 9, 1); // Oct 1, 2025
-              const endDate = new Date(2026, 2, 31); // March 31, 2026
-              const timeRange = endDate.getTime() - startDate.getTime();
-              
-              // Build data points with cumulative percentage return
-              let cumulativeReturn = 0;
-              let runningCapital = initialCapital + transferCapital;
-              const dataPoints = [{ x: 0, y: 0 }]; // Start at 0% return
-              
-              if (closedTrades.length > 0) {
-                // Use trades in their existing order (they should be sorted by date from API)
-                const sortedTrades = [...closedTrades];
+              // Build trade returns based on individual trade capital
+              const tradeReturns = closedTrades.map(trade => {
+                const cleanPnL = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                const tradePnL = parseFloat(cleanPnL) || 0;
                 
-                // Spread trades between Oct 1 and Oct 7 (today)
-                const tradingDays = 6; // Oct 1 to Oct 7
-                const daysPerTrade = tradingDays / sortedTrades.length;
+                const cleanCapital = trade.capital.value.replace(/[₹,]/g, '');
+                const tradeCapital = parseFloat(cleanCapital) || 1;
                 
-                sortedTrades.forEach((trade, index) => {
-                  const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
-                  const tradePnL = parseFloat(cleanValue) || 0;
-                  
-                  // Calculate this trade's return as % of capital at the time
-                  const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
-                  
-                  // Add to cumulative return percentage
-                  cumulativeReturn += tradeReturnPercent;
-                  
-                  // Update running capital for next trade
-                  runningCapital += tradePnL;
-                  
-                  // Place trade between Oct 1 and Oct 7
-                  const daysFromStart = (index + 1) * daysPerTrade;
-                  const tradeDate = new Date(startDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
-                  const xPosition = (tradeDate.getTime() - startDate.getTime()) / timeRange;
-                  
-                  dataPoints.push({ x: xPosition, y: cumulativeReturn });
-                });
-              } else {
-                // If no closed trades, just show flat line at 0%
-                dataPoints.push({ x: 0.01, y: 0 });
+                const tradeReturnPercent = (tradePnL / tradeCapital) * 100;
+                
+                return {
+                  type: 'trade' as const,
+                  date: parseTradeDate(trade),
+                  data: trade,
+                  returnPercent: tradeReturnPercent
+                };
+              }).sort((a, b) => a.date.getTime() - b.date.getTime());
+              
+              // TEST MODE: Add 100 random bars for design testing
+              // const testMode = false;
+              // if (testMode) {
+              //   tradeReturns = [];
+              //   for (let i = 0; i < 100; i++) {
+              //     const randomReturn = (Math.random() - 0.5) * 10; // Random between -5% and +5%
+              //     tradeReturns.push({
+              //       type: 'trade' as const,
+              //       date: new Date(),
+              //       data: {},
+              //       returnPercent: randomReturn
+              //     });
+              //   }
+              // }
+              
+              if (tradeReturns.length === 0) {
+                return <text x="500" y="125" textAnchor="middle" fill="#9CA3AF">No trades</text>;
               }
               
-              // Y-axis shows cumulative percentage return
-              const minY = Math.min(...dataPoints.map(p => p.y), 0);
-              const maxY = Math.max(...dataPoints.map(p => p.y), 0);
-              const range = maxY - minY || 1;
+              // Find min/max return for scaling
+              const allReturns = tradeReturns.map(t => t.returnPercent || 0);
+              const maxReturn = Math.max(...allReturns, 0.5);
+              const minReturn = Math.min(...allReturns, -0.5);
+              const returnRange = maxReturn - minReturn;
               
-              // Calculate baseline Y position (0% return baseline)
-              const baselineY = 280 - ((0 - minY) / range) * 260 - 10;
+              // Calculate baseline Y position (0% line) with padding
+              const topPadding = 20;
+              const bottomPadding = 20;
+              const chartHeight = 250 - topPadding - bottomPadding;
+              const baselineY = topPadding + chartHeight - ((0 - minReturn) / returnRange) * chartHeight;
+              
+              // Calculate bar width - 4px gap between bars
+              const gap = 4;
+              const totalBars = tradeReturns.length;
+              const availableWidth = 1000;
+              const barWidth = (availableWidth - (totalBars - 1) * gap) / totalBars;
               
               return (
                 <>
-                  {/* Baseline (0% return) - prominent line */}
-                  <line 
-                    x1="0" 
-                    y1={baselineY} 
-                    x2="1000" 
-                    y2={baselineY} 
-                    stroke="#374151" 
-                    strokeWidth="2" 
-                    strokeDasharray="8 4"
-                    opacity="0.4"
+                  {/* Baseline at 0% */}
+                  <line
+                    x1="0"
+                    y1={baselineY}
+                    x2="1000"
+                    y2={baselineY}
+                    stroke="#9CA3AF"
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
                   />
                   
-                  {/* Draw line segments with colors based on whether above/below 0% */}
-                  {dataPoints.map((point, i) => {
-                    if (i === 0) return null;
-                    const prevPoint = dataPoints[i - 1];
+                  {/* Bars for each trade */}
+                  {tradeReturns.map((trade, i) => {
+                    const returnPercent = trade.returnPercent || 0;
+                    const x = i * (barWidth + gap);
+                    const barHeight = Math.abs((returnPercent / returnRange) * chartHeight);
                     
-                    // Determine color: green if going up OR above zero, red if going down OR below zero
-                    let segmentColor;
-                    if (point.y > prevPoint.y && point.y > 0) {
-                      // Going up and above baseline
-                      segmentColor = '#10B981'; // Green
-                    } else if (point.y > prevPoint.y && point.y <= 0) {
-                      // Going up but still below baseline
-                      segmentColor = '#FFA500'; // Orange (recovering)
-                    } else if (point.y <= prevPoint.y && point.y >= 0) {
-                      // Going down but still above baseline  
-                      segmentColor = '#FFA500'; // Orange (declining from profit)
+                    let y, height;
+                    if (returnPercent >= 0) {
+                      // Green bar going up
+                      height = barHeight;
+                      y = baselineY - height;
                     } else {
-                      // Going down and below baseline
-                      segmentColor = '#EF4444'; // Red
+                      // Red bar going down
+                      height = barHeight;
+                      y = baselineY;
                     }
                     
-                    const x1 = prevPoint.x * 1000;
-                    const y1 = 280 - ((prevPoint.y - minY) / range) * 260 - 10;
-                    const x2 = point.x * 1000;
-                    const y2 = 280 - ((point.y - minY) / range) * 260 - 10;
-                    
-                    console.log(`Segment ${i}: from ${prevPoint.y.toFixed(2)}% to ${point.y.toFixed(2)}%, color: ${segmentColor}`);
-                    
-                    return (
-                      <line
-                        key={i}
-                        x1={x1}
-                        y1={y1}
-                        x2={x2}
-                        y2={y2}
-                        stroke={segmentColor}
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    );
-                  })}
-                  
-                  {/* Area fill - green above baseline, red below */}
-                  {dataPoints.map((point, i) => {
-                    if (i === 0) return null;
-                    const prevPoint = dataPoints[i - 1];
-                    const x1 = prevPoint.x * 1000;
-                    const y1 = 280 - ((prevPoint.y - minY) / range) * 260 - 10;
-                    const x2 = point.x * 1000;
-                    const y2 = 280 - ((point.y - minY) / range) * 260 - 10;
-                    
-                    const areaPath = `M ${x1} ${y1} L ${x2} ${y2} L ${x2} ${baselineY} L ${x1} ${baselineY} Z`;
-                    const fillColor = point.y >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    // Calculate opacity based on hover state
+                    let barOpacity = 0.8;
+                    if (hoveredBarIndex !== null) {
+                      barOpacity = hoveredBarIndex === i ? 1 : 0.5;
+                    }
                     
                     return (
-                      <path
-                        key={`area-${i}`}
-                        d={areaPath}
-                        fill={fillColor}
+                      <rect
+                        key={`bar-${i}`}
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={height}
+                        fill={returnPercent >= 0 ? '#50D959' : '#EF4444'}
+                        opacity={barOpacity}
+                        style={{ 
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          setHoveredBarIndex(i);
+                          const svgRect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                          const barX = (x + barWidth / 2) / 1000 * (svgRect?.width || 1000);
+                          // For positive bars, use top (y). For negative bars, use bottom (y + height)
+                          const barYPosition = returnPercent >= 0 ? y : (y + height);
+                          const barY = barYPosition / 250 * (svgRect?.height || 250);
+                          setHoveredBarData({
+                            x: barX,
+                            y: barY,
+                            value: `${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%`,
+                            isPositive: returnPercent >= 0
+                          });
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredBarIndex(null);
+                          setHoveredBarData(null);
+                        }}
                       />
                     );
                   })}
@@ -261,31 +292,108 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
             })()}
           </svg>
           
-          {/* Time Scale - Oct 2025 to March 2026 across 16 columns */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', marginBottom: '8px', marginLeft: '0', marginRight: '0' }}>
-            {(() => {
-              const startDate = new Date(2025, 9, 1); // Oct 1, 2025
-              const endDate = new Date(2026, 2, 31); // March 31, 2026
-              const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-              const timestamps = [];
-              
-              for (let i = 0; i < 16; i++) {
-                const daysOffset = (totalDays / 15) * i; // 15 intervals for 16 points
-                const date = new Date(startDate.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-                const month = date.toLocaleDateString('en-US', { month: 'short' });
-                const day = date.getDate();
-                
-                timestamps.push(
-                  <div key={i} style={{ flex: '1 1 0', fontSize: '10px', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
-                    {month} {day}
-                  </div>
-                );
-              }
-              
-              return timestamps;
-            })()}
-          </div>
+          {/* Custom Tooltip */}
+          {hoveredBarData && (
+            <div style={{
+              position: 'absolute',
+              left: `${hoveredBarData.x}px`,
+              top: hoveredBarData.isPositive ? `${hoveredBarData.y - 12}px` : `${hoveredBarData.y + 12}px`,
+              transform: hoveredBarData.isPositive ? 'translate(-50%, -100%)' : 'translateX(-50%)',
+              backgroundColor: '#1E3F66',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '600',
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              zIndex: 10,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}>
+              {hoveredBarData.value}
+              {/* Arrow - points down for green bars (above), points up for red bars (below) */}
+              <div style={{
+                position: 'absolute',
+                ...(hoveredBarData.isPositive ? {
+                  bottom: '-6px',
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderTop: '6px solid #1E3F66'
+                } : {
+                  top: '-6px',
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderBottom: '6px solid #1E3F66'
+                }),
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 0,
+                height: 0
+              }} />
+            </div>
+          )}
         </div>
+
+        {/* X-axis - 16 timestamps - COMMENTED OUT - Uncomment to show */}
+        {/* <div style={{
+          position: 'absolute',
+          bottom: '0',
+          left: '0',
+          right: '0',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(16, 1fr)',
+          paddingBottom: '16px'
+        }}>
+          {(() => {
+            const labels = [];
+            
+            // Get date range from trades
+            const parseTradeDate = (trade: any) => {
+              const monthMap: {[key: string]: number} = {
+                'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+              };
+              if (trade.closingDate) return new Date(trade.closingDate);
+              if (trade.date) {
+                const month = monthMap[trade.date.month.toUpperCase()] ?? 9;
+                const day = parseInt(trade.date.day) || 1;
+                return new Date(2025, month, day);
+              }
+              return new Date(2025, 9, 1);
+            };
+            
+            const tradeDates = closedTrades.map(parseTradeDate).sort((a, b) => a.getTime() - b.getTime());
+            const startDate = tradeDates.length > 0 ? tradeDates[0] : new Date(2025, 9, 1);
+            const endDate = tradeDates.length > 0 ? tradeDates[tradeDates.length - 1] : new Date(2026, 3, 30);
+            const timeRange = endDate.getTime() - startDate.getTime();
+            
+            // Create 16 evenly spaced timestamps
+            for (let i = 0; i < 16; i++) {
+              const time = startDate.getTime() + (timeRange / 15) * i;
+              const date = new Date(time);
+              const month = date.toLocaleDateString('en-US', { month: 'short' });
+              const day = date.getDate();
+              
+              labels.push(
+                <div 
+                  key={i} 
+                  style={{ 
+                    fontSize: '12px',
+                    fontWeight: '400',
+                    color: '#1E3F66',
+                    opacity: 0.25,
+                    fontFamily: 'Inter, sans-serif',
+                    textAlign: 'center'
+                  }}>
+                  {month} {day}
+                </div>
+              );
+            }
+            
+            return labels;
+          })()}
+        </div> */}
       </section>
 
       {/* Metrics Section - 4 Boxes */}
@@ -312,41 +420,71 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                 {(() => {
                   const initialCapital = 1586000;
                   
-                  // Calculate total transfer capital (deposits - withdrawals)
-                  const transferCapital = transfers.reduce((sum, t) => {
-                    return sum + (t.type === 'deposit' ? t.amount : -t.amount);
-                  }, 0);
+                  // Use the same chronological calculation as the graph
+                  const parseTradeDate = (trade: any) => {
+                    const monthMap: {[key: string]: number} = {
+                      'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                      'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                    };
+                    
+                    // For closed trades, use closingDate if available
+                    if (trade.closingDate) {
+                      return new Date(trade.closingDate);
+                    }
+                    
+                    // Fallback: use the date object from trade
+                    if (trade.date) {
+                      const month = monthMap[trade.date.month.toUpperCase()] ?? 9;
+                      const day = parseInt(trade.date.day) || 1;
+                      return new Date(2025, month, day);
+                    }
+                    
+                    return new Date(2025, 9, 1);
+                  };
                   
-                  // Calculate cumulative return considering capital at each trade
+                  const parseTransferDate = (transfer: any) => {
+                    const monthMap: {[key: string]: number} = {
+                      'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                      'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                    };
+                    const month = monthMap[transfer.date.month.toUpperCase()] ?? 9;
+                    const day = parseInt(transfer.date.day) || 1;
+                    return new Date(2025, month, day);
+                  };
+                  
+                  const events: Array<{type: 'trade' | 'transfer', date: Date, data: any}> = [];
+                  closedTrades.forEach(trade => {
+                    events.push({ type: 'trade', date: parseTradeDate(trade), data: trade });
+                  });
+                  transfers.forEach(transfer => {
+                    events.push({ type: 'transfer', date: parseTransferDate(transfer), data: transfer });
+                  });
+                  events.sort((a, b) => a.date.getTime() - b.date.getTime());
+                  
                   let cumulativeReturn = 0;
-                  // Starting capital = Initial + All Transfers
-                  let runningCapital = initialCapital + transferCapital;
+                  let runningCapital = initialCapital;
+                  let closedPnL = 0;
                   
-                  // Sort trades by date (assuming they come in chronological order)
-                  const sortedTrades = [...closedTrades];
-                  
-                  sortedTrades.forEach(trade => {
-                    // Get P&L for this trade
-                    const cleanValue = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
-                    const tradePnL = parseFloat(cleanValue) || 0;
-                    
-                    // Calculate this trade's return as % of capital available at the time
-                    const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
-                    
-                    // Add to cumulative return
-                    cumulativeReturn += tradeReturnPercent;
-                    
-                    // Update running capital for next trade
-                    runningCapital += tradePnL;
+                  events.forEach(event => {
+                    if (event.type === 'transfer') {
+                      const amount = event.data.amount;
+                      if (event.data.type === 'deposit') {
+                        runningCapital += amount;
+                      } else {
+                        runningCapital -= amount;
+                      }
+                    } else if (event.type === 'trade') {
+                      const cleanValue = event.data.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
+                      const tradePnL = parseFloat(cleanValue) || 0;
+                      closedPnL += tradePnL;
+                      
+                      const tradeReturnPercent = runningCapital > 0 ? (tradePnL / runningCapital) * 100 : 0;
+                      cumulativeReturn += tradeReturnPercent;
+                      runningCapital += tradePnL;
+                    }
                   });
                   
-                  const closedPnL = sortedTrades.reduce((sum, t) => {
-                    const cleanValue = t.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
-                    const value = parseFloat(cleanValue) || 0;
-                    return sum + value;
-                  }, 0);
-                  
-                  // Return on Initial Capital - shows overall account growth
+                  // Return on Initial Capital
                   const returnOnInitial = ((closedPnL / initialCapital) * 100);
                   
                   return (
@@ -505,20 +643,20 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           </colgroup>
           <thead>
             <tr style={{ backgroundColor: 'white', borderTop: '1px dashed #DEE2E8' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Inst</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Bias</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Setup/Strategy</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Lots</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Profit / Loss</th>
-              <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Inst</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Bias</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Setup/Strategy</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Lots</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Profit / Loss</th>
+              <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Max Loss</span>
                   <span>Max Profit</span>
                 </div>
               </th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Capital</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>@Risk</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Capital</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>@Risk</th>
               <th style={{ padding: '16px', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8' }}></th>
             </tr>
           </thead>
@@ -534,7 +672,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                 <tr key={trade.id} className="table-row">
                   {/* Date */}
                   <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', border: '3px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
                       <div style={{ backgroundColor: '#1E3F66', color: 'white', textAlign: 'center', fontSize: '8px', fontWeight: '700', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.month}</div>
                       <div style={{ backgroundColor: 'white', color: '#1E3F66', textAlign: 'center', fontSize: '14px', fontWeight: '700', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.day}</div>
                     </div>

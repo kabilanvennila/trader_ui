@@ -152,21 +152,53 @@ function Transfers() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'white', position: 'relative' }}>
-      {/* Main Content Container - Max Width 1280px with Vertical Grid Lines */}
+      {/* Grid Background - Centered 1280px container, then extend outward */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}>
+        {/* Center 1280px grid (16 columns) */}
+        <div style={{
+          width: '1280px',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundSize: '1280px 100%',
+          backgroundPosition: 'left top',
+          backgroundRepeat: 'no-repeat'
+        }} />
+        
+        {/* Left extension - start from 80px before center grid */}
+        <div style={{
+          position: 'absolute',
+          right: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundPosition: 'right top'
+        }} />
+        
+        {/* Right extension */}
+        <div style={{
+          position: 'absolute',
+          left: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`
+        }} />
+      </div>
+      
+      {/* Main Content Container - Max Width 1280px */}
       <div style={{
         position: 'relative',
         zIndex: 10,
         maxWidth: '1280px',
         margin: '0 auto',
-        backgroundColor: 'white',
-        minHeight: '100vh',
-        backgroundImage: `
-          repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent calc(100% / 16)),
-          linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px)
-        `,
-        backgroundSize: '100% 100%, 1px 100%',
-        backgroundPosition: 'left top, right top',
-        backgroundRepeat: 'no-repeat'
+        backgroundColor: 'transparent',
+        minHeight: '100vh'
       }}>
       <Header />
 
@@ -174,7 +206,7 @@ function Transfers() {
       <main style={{ marginTop: '80px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(16, 1fr)' }}>
           {/* Left: Summary Containers - 7 columns */}
-          <div style={{ gridColumn: 'span 7', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+          <div style={{ gridColumn: 'span 7', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
             {/* Current Capital */}
             <div style={{
               backgroundColor: '#F9FAFB',
@@ -260,7 +292,7 @@ function Transfers() {
           </div>
 
           {/* Right: Transfers Table - 9 columns */}
-          <section style={{ gridColumn: 'span 9', marginBottom: '0', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+          <section style={{ gridColumn: 'span 9', marginBottom: '0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '11.11%' }} /> {/* Date - 1 column */}
@@ -271,11 +303,11 @@ function Transfers() {
               </colgroup>
               <thead>
                 <tr style={{ backgroundColor: 'white' }}>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
+                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Type</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Amount</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Notes</th>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Actions</th>
+                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,7 +318,8 @@ function Transfers() {
                       textAlign: 'center', 
                       color: '#6B7280',
                       fontFamily: 'Inter, sans-serif',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      borderLeft: '1px solid rgba(217, 217, 217, 0.5)'
                     }}>
                       Loading transfers...
                     </td>
@@ -298,7 +331,8 @@ function Transfers() {
                       textAlign: 'center', 
                       color: '#6B7280',
                       fontFamily: 'Inter, sans-serif',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      borderLeft: '1px solid rgba(217, 217, 217, 0.5)'
                     }}>
                       No transfers found
                     </td>
@@ -315,7 +349,7 @@ function Transfers() {
                     }}
                   >
                     {/* Date */}
-                    <td style={{ padding: '16px', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>
+                    <td style={{ padding: '16px', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>{transfer.date.month}</span>
                         <span style={{ fontSize: '20px', fontWeight: '700', color: '#1F2937' }}>{transfer.date.day}</span>
@@ -355,7 +389,7 @@ function Transfers() {
                     </td>
 
                     {/* Actions - Delete Button */}
-                    <td style={{ padding: '0', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', textAlign: 'center', overflow: 'hidden' }}>
+                    <td style={{ padding: '0', borderBottom: '1px dashed #DEE2E8', textAlign: 'center', overflow: 'hidden' }}>
                       <div 
                         onClick={() => handleDeleteTransfer(transfer.id)}
                         style={{

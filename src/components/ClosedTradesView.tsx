@@ -12,8 +12,6 @@ interface ClosedTradesViewProps {
   handleModifyClosedTrade: (trade: Trade) => void;
   handleDeleteTrade: (trade: Trade) => void;
   renderBiasIcon: (bias: 'bullish' | 'bearish' | 'neutral') => JSX.Element;
-  getBiasCellColor: (bias: 'bullish' | 'bearish' | 'neutral') => string;
-  getBiasCellClass: (bias: 'bullish' | 'bearish' | 'neutral') => string;
 }
 
 const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
@@ -26,16 +24,14 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
   toggleMenu,
   handleModifyClosedTrade,
   handleDeleteTrade,
-  renderBiasIcon,
-  getBiasCellColor,
-  getBiasCellClass
+  renderBiasIcon
 }) => {
   // Filter only closed trades
   const closedTrades = trades.filter(t => t.status === 'closed');
   
   // State for tracking hovered bar
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
-  const [hoveredBarData, setHoveredBarData] = useState<{x: number, y: number, value: string, isPositive: boolean} | null>(null);
+  const [hoveredBarData, setHoveredBarData] = useState<{x: number, y: number, percentage: string, amount: string, isPositive: boolean} | null>(null);
 
   // Styles for chart section
   const chartStyles = {
@@ -163,6 +159,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               };
               
               // Build trade returns based on individual trade capital
+              // Reverse order: oldest (left) to newest (right)
               const tradeReturns = closedTrades.map(trade => {
                 const cleanPnL = trade.profitLoss.value.replace(/[₹,]/g, '').replace(/^\+/, '');
                 const tradePnL = parseFloat(cleanPnL) || 0;
@@ -174,11 +171,11 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                 
                 return {
                   type: 'trade' as const,
-                  date: parseTradeDate(trade),
+                  date: trade.closingDate ? new Date(trade.closingDate) : parseTradeDate(trade),
                   data: trade,
                   returnPercent: tradeReturnPercent
                 };
-              }).sort((a, b) => a.date.getTime() - b.date.getTime());
+              }).reverse();
               
               // TEST MODE: Add 100 random bars for design testing
               // const testMode = false;
@@ -273,10 +270,15 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                           // For positive bars, use top (y). For negative bars, use bottom (y + height)
                           const barYPosition = returnPercent >= 0 ? y : (y + height);
                           const barY = barYPosition / 250 * (svgRect?.height || 250);
+                          
+                          // Get P&L value for this trade
+                          const pnlValue = trade.data.profitLoss.value;
+                          
                           setHoveredBarData({
                             x: barX,
                             y: barY,
-                            value: `${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%`,
+                            percentage: `${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%`,
+                            amount: pnlValue,
                             isPositive: returnPercent >= 0
                           });
                         }}
@@ -311,7 +313,8 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               zIndex: 10,
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
             }}>
-              {hoveredBarData.value}
+              <div>{hoveredBarData.percentage}</div>
+              <div style={{ fontSize: '12px', opacity: 0.85, marginTop: '2px' }}>{hoveredBarData.amount}</div>
               {/* Arrow - points down for green bars (above), points up for red bars (below) */}
               <div style={{
                 position: 'absolute',
@@ -400,8 +403,6 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
       <section style={{
         borderTop: '1px dashed #DEE2E8',
         borderBottom: '1px dashed #DEE2E8',
-        borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-        borderRight: '1px solid rgba(217, 217, 217, 0.5)',
         marginBottom: '40px'
       }}>
         <div className="flex" style={{ height: '270px', gap: '1px' }}>
@@ -413,7 +414,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               return sum + value;
             }, 0);
             return closedPnL >= 0 ? '#D1FAE5' : '#FEE2E2';
-          })(), boxSizing: 'border-box', overflow: 'hidden' }}>
+          })(), boxSizing: 'border-box', overflow: 'hidden', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
             <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
               <div style={styles.contentAnchor}>Total Profit / Loss</div>
               <div>
@@ -627,7 +628,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
       </section>
 
       {/* Closed Trades Table */}
-      <section style={{ borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+      <section>
         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', backgroundColor: 'transparent' }}>
           <colgroup>
             <col style={{ width: 'calc(100% / 16 * 1)' }} />
@@ -643,7 +644,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           </colgroup>
           <thead>
             <tr style={{ backgroundColor: 'white', borderTop: '1px dashed #DEE2E8' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
+              <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
               <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Inst</th>
               <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Bias</th>
               <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Setup/Strategy</th>
@@ -663,7 +664,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
           <tbody>
             {closedTrades.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ padding: '60px', textAlign: 'center', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#9CA3AF', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8' }}>
+                <td colSpan={10} style={{ padding: '60px', textAlign: 'center', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#9CA3AF', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
                   No closed trades found
                 </td>
               </tr>
@@ -671,11 +672,26 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
               closedTrades.map((trade) => (
                 <tr key={trade.id} className="table-row">
                   {/* Date */}
-                  <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
-                      <div style={{ backgroundColor: '#1E3F66', color: 'white', textAlign: 'center', fontSize: '8px', fontWeight: '700', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.month}</div>
-                      <div style={{ backgroundColor: 'white', color: '#1E3F66', textAlign: 'center', fontSize: '14px', fontWeight: '700', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.day}</div>
-                    </div>
+                  <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                    {(() => {
+                      // Use closing date if available, otherwise fall back to trade date
+                      let month = trade.date.month;
+                      let day = trade.date.day;
+                      
+                      if (trade.closingDate) {
+                        const closingDateObj = new Date(trade.closingDate);
+                        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                        month = monthNames[closingDateObj.getMonth()];
+                        day = closingDateObj.getDate().toString();
+                      }
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
+                          <div style={{ backgroundColor: '#1E3F66', color: 'white', textAlign: 'center', fontSize: '8px', fontWeight: '700', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{month}</div>
+                          <div style={{ backgroundColor: 'white', color: '#1E3F66', textAlign: 'center', fontSize: '14px', fontWeight: '700', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{day}</div>
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* Instrument */}
@@ -685,7 +701,7 @@ const ClosedTradesView: React.FC<ClosedTradesViewProps> = ({
                   </td>
 
                   {/* Bias */}
-                  <td className={getBiasCellClass(trade.bias)} style={{ padding: '16px', backgroundColor: getBiasCellColor(trade.bias), borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                  <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       {renderBiasIcon(trade.bias)}
                     </div>

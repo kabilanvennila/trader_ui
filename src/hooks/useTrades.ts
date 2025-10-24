@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { 
   Trade, 
+  Transfer,
   CreateTradeRequest, 
   UpdateTradeRequest, 
   DashboardMetrics,
@@ -178,7 +179,7 @@ export function useTradeManagement(filters?: TradeFilters) {
 }
 
 // Hook for calculating metrics from trade data (client-side fallback)
-export function useCalculatedMetrics(trades: Trade[]) {
+export function useCalculatedMetrics(trades: Trade[], transfers: Transfer[] = []) {
   const calculateMetrics = useCallback((): DashboardMetrics => {
     const totalTrades = trades.length;
     
@@ -237,19 +238,25 @@ export function useCalculatedMetrics(trades: Trade[]) {
     
     console.log('🔍 Dashboard total Max Loss:', totalMaxLoss);
     
-    // Calculate buying power remaining (Total Buying Power - Deployed Capital)
-    // Total Buying Power = Transfer Capital + Closed Trades P&L
+    // Calculate buying power = Current Capital - Deployed Capital
     const closedTrades = trades.filter(t => t.status === 'closed');
     const closedPnL = closedTrades.reduce((sum, t) => {
       const value = parseFloat(t.profitLoss.value.replace(/[₹,+-]/g, ''));
       return sum + (t.profitLoss.isProfit ? value : -value);
     }, 0);
-    const totalBuyingPower = 1600000 + closedPnL; // Transfer capital + closed P&L
-    const buyingPowerRemaining = totalBuyingPower - totalCapital;
     
-    // Calculate total risk as % of overall capital at risk (sum of max losses / total buying power)
+    // Calculate transfer capital from actual transfers data
+    const transferCapital = transfers.reduce((sum, transfer) => {
+      const amount = transfer.amount || 0;
+      return sum + (transfer.type === 'deposit' ? amount : -amount);
+    }, 0);
+    
+    const currentCapital = transferCapital + closedPnL; // Current Capital = Transfers + Closed P&L
+    const buyingPower = currentCapital - totalCapital; // Buying Power = Current Capital - Deployed
+    
+    // Calculate total risk as % of current capital
     const totalRiskAmount = totalMaxLoss; // Sum of all max losses
-    const totalRiskPercentage = totalBuyingPower > 0 ? (totalRiskAmount / totalBuyingPower) * 100 : 0;
+    const totalRiskPercentage = currentCapital > 0 ? (totalRiskAmount / currentCapital) * 100 : 0;
     
     return {
       totalTrades,
@@ -260,12 +267,12 @@ export function useCalculatedMetrics(trades: Trade[]) {
       totalMaxLoss: totalMaxLoss.toLocaleString('en-IN'),
       totalRisk: totalRiskPercentage.toFixed(1),
       totalCapital: totalCapital.toLocaleString('en-IN'),
-      buyingPowerUsed: buyingPowerRemaining.toLocaleString('en-IN'),
-      buyingPowerPercentage: ((buyingPowerRemaining / totalBuyingPower) * 100).toFixed(1),
+      buyingPowerUsed: buyingPower.toLocaleString('en-IN'),
+      buyingPowerPercentage: ((buyingPower / currentCapital) * 100).toFixed(1),
       isProfitable: totalPnL >= 0,
       backgroundColor: totalPnL >= 0 ? '#D1FAE5' : '#FEE2E2'
     };
-  }, [trades]);
+  }, [trades, transfers]);
 
   return calculateMetrics();
 }

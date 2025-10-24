@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Trade } from './types/api';
 import { tradeApi } from './services/api';
 import { useAppContext } from './context/AppContext';
+import Login from './components/Login';
 
 // Reusable Styles
 const styles = {
@@ -97,6 +98,8 @@ function formatCompactNumber(value: number | string): string {
 }
 
 function App() {
+  // Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // Get location state for navigation
   const location = useLocation();
@@ -265,7 +268,7 @@ function App() {
   const activeTab = 'active' as const;
   
   // Calculate metrics from filtered trade data (based on active tab)
-  const metrics = useCalculatedMetrics(filteredTrades);
+  const metrics = useCalculatedMetrics(filteredTrades, transfers);
   
   const toggleMenu = (menuId: string) => {
     setOpenMenuId(openMenuId === menuId ? null : menuId);
@@ -797,43 +800,32 @@ function App() {
     }
   };
   
-  // Helper function to render bias icon
+  // Helper function to render bias icon with circle background
   const renderBiasIcon = (bias: 'bullish' | 'bearish' | 'neutral') => {
     if (bias === 'bullish') {
       return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="7" y1="17" x2="17" y2="7"></line>
-          <polyline points="7 7 17 7 17 17"></polyline>
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" fill="#D1FAE5" />
+          <line x1="17" y1="23" x2="23" y2="17" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points="17 17 23 17 23 23" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         </svg>
       );
     } else if (bias === 'bearish') {
       return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="7" y1="7" x2="17" y2="17"></line>
-          <polyline points="17 7 17 17 7 17"></polyline>
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" fill="#FEE2E2" />
+          <line x1="17" y1="17" x2="23" y2="23" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points="23 17 23 23 17 23" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         </svg>
       );
     } else {
       return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" fill="#F3F4F6" />
+          <line x1="17" y1="20" x2="23" y2="20" stroke="#6B7280" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       );
     }
-  };
-  
-  // Helper function to get bias cell background color
-  const getBiasCellColor = (bias: 'bullish' | 'bearish' | 'neutral') => {
-    if (bias === 'bullish') return '#D1FAE5';
-    if (bias === 'bearish') return '#FEE2E2';
-    return '#F3F4F6';
-  };
-  
-  // Helper function to get bias cell class
-  const getBiasCellClass = (bias: 'bullish' | 'bearish' | 'neutral') => {
-    if (bias === 'bullish') return 'bias-cell-bullish';
-    if (bias === 'bearish') return 'bias-cell-bearish';
-    return 'bias-cell-neutral';
   };
   
   // Close menu when clicking outside
@@ -852,30 +844,64 @@ function App() {
     };
   }, [openMenuId]);
   
+  // Show login page if not logged in
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
+  
   return (
     <div className="min-h-screen bg-white relative">
-      {/* Main Content Container - Max Width 1280px with Vertical Grid Lines */}
-      <div className="relative z-10 max-w-[1280px] mx-auto bg-white min-h-screen" style={{
-        backgroundImage: `
-          repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent calc(100% / 16)),
-          linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px)
-        `,
-        backgroundSize: '100% 100%, 1px 100%',
-        backgroundPosition: 'left top, right top',
-        backgroundRepeat: 'no-repeat'
+      {/* Grid Background - Centered 1280px container, then extend outward */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: 0
       }}>
+        {/* Center 1280px grid (16 columns) */}
+        <div style={{
+          width: '1280px',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundSize: '1280px 100%',
+          backgroundPosition: 'left top',
+          backgroundRepeat: 'no-repeat'
+        }} />
+        
+        {/* Left extension - align to end at center grid edge */}
+        <div style={{
+          position: 'absolute',
+          right: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundPosition: 'right top'
+        }} />
+        
+        {/* Right extension */}
+        <div style={{
+          position: 'absolute',
+          left: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`
+        }} />
+      </div>
+      
+      {/* Main Content Container - Exactly 1280px (16 × 80px columns) */}
+      <div className="relative z-10 w-full max-w-[1280px] mx-auto bg-transparent min-h-screen" style={{ padding: 0 }}>
         <Header activePage={activePage} onPageChange={setActivePage} />
 
         {/* Main Content Area */}
-        <main style={{ marginTop: '80px' }}>
+        <main style={{ marginTop: '80px', padding: 0, margin: '80px 0 0 0' }}>
           {activePage === 'dashboard' && (
           <>
           {/* Market Indices Section */}
           <section style={{ 
             borderTop: '1px solid rgba(217, 217, 217, 0.5)',
             borderBottom: '1px solid rgba(217, 217, 217, 0.5)',
-            borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-            borderRight: '1px solid rgba(217, 217, 217, 0.5)',
             marginBottom: '40px'
           }}>
             <div style={{ 
@@ -892,7 +918,8 @@ function App() {
                 padding: '16px 20px',
                 display: 'flex',
                 gap: '12px',
-                alignItems: 'center'
+                alignItems: 'center',
+                borderLeft: '1px solid rgba(217, 217, 217, 0.5)'
               }}>
               <div style={{
                 width: '40px',
@@ -1032,14 +1059,12 @@ function App() {
           <section style={{
             borderTop: '1px dashed #DEE2E8',
             borderBottom: '1px dashed #DEE2E8',
-            borderLeft: '1px solid rgba(217, 217, 217, 0.5)',
-            borderRight: '1px solid rgba(217, 217, 217, 0.5)',
             marginBottom: '40px'
           }}>
             {/* 4 Subsections - Aligned with vertical lines, no visible gaps */}
             <div className="flex" style={{ height: '270px', gap: '1px' }}>
                 {/* Subsection 1 - Dynamic Background Color */}
-                <div style={{ width: `calc((100% - ${activeTab === 'active' ? '2px' : '3px'}) / 4)`, backgroundColor: metrics.backgroundColor, boxSizing: 'border-box', overflow: 'hidden' }}>
+                <div style={{ width: `calc((100% - ${activeTab === 'active' ? '2px' : '3px'}) / 4)`, backgroundColor: metrics.backgroundColor, boxSizing: 'border-box', overflow: 'hidden', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
                   <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                     {/* Title */}
                     <div style={styles.contentAnchor}>
@@ -1289,7 +1314,7 @@ function App() {
           </section>
 
           {/* Active Trades Table Section */}
-          <section style={{ borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+          <section>
             {/* Loading State */}
             {tradesLoading && (
               <div style={{ 
@@ -1380,7 +1405,7 @@ function App() {
               </colgroup>
               <thead>
                 <tr style={{ backgroundColor: 'white', borderTop: '1px dashed #DEE2E8' }}>
-                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
+                  <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', fontFamily: 'Inter, sans-serif' }}>Date</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Inst</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Bias</th>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '400', color: '#1E3F66', opacity: 0.25, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', backgroundColor: 'white', borderTop: '1px dashed #DEE2E8', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>Setup/Strategy</th>
@@ -1417,7 +1442,7 @@ function App() {
                 {/* Render filtered trades from API */}
                 {filteredTrades.map((trade) => (
                 <tr key={trade.id} className="table-row">
-                  <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                  <td style={{ padding: '18px 24px', fontSize: '14px', color: '#1F2937', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #1E3F66', overflow: 'hidden', width: '31px', height: '36px' }}>
                       <div style={{ backgroundColor: '#1E3F66', color: 'white', textAlign: 'center', fontSize: '8px', fontWeight: '700', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>{trade.date.month}</div>
                       <div style={{ backgroundColor: 'white', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px', fontSize: '10px', fontWeight: '700', fontFamily: 'Inter, sans-serif' }}>{trade.date.day}</div>
@@ -1427,7 +1452,7 @@ function App() {
                     <div style={styles.textPrimary}>{trade.instrument.name}</div>
                     <div style={styles.textSecondary}>{trade.instrument.type}</div>
                   </td>
-                  <td className={getBiasCellClass(trade.bias)} style={{ padding: '16px', backgroundColor: getBiasCellColor(trade.bias), borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
+                  <td style={{ padding: '16px', backgroundColor: 'white', borderBottom: '1px dashed #DEE2E8', borderRight: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                       {renderBiasIcon(trade.bias)}
                     </div>
@@ -1738,7 +1763,7 @@ function App() {
                 {/* Show message if no filtered trades */}
                 {filteredTrades.length === 0 && !tradesLoading && (
                 <tr>
-                  <td colSpan={10} style={{ padding: '40px', textAlign: 'center', fontSize: '16px', color: '#6B7280' }}>
+                  <td colSpan={10} style={{ padding: '40px', textAlign: 'center', fontSize: '16px', color: '#6B7280', borderLeft: '1px solid rgba(217, 217, 217, 0.5)' }}>
                     {activeTab === 'active' ? 'No active trades found' : 'No closed trades found'}
                   </td>
                 </tr>
@@ -1749,7 +1774,7 @@ function App() {
             
             {/* Add New Trade Button - only show for active trades */}
             {activeTab === 'active' && (
-            <div style={{ borderLeft: '1px solid rgba(217, 217, 217, 0.5)', borderRight: '1px solid rgba(217, 217, 217, 0.5)', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button 
                 onClick={() => setIsFormOpen(true)}
                 disabled={tradesLoading}
@@ -1799,8 +1824,6 @@ function App() {
               handleModifyClosedTrade={handleModifyTrade}
               handleDeleteTrade={handleDeleteTrade}
               renderBiasIcon={renderBiasIcon}
-              getBiasCellColor={getBiasCellColor}
-              getBiasCellClass={getBiasCellClass}
             />
           )}
         </main>

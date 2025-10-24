@@ -4,12 +4,44 @@ import StrategyTable from './StrategyTable';
 
 const Dashboard: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Watermark */}
-      <div className="fixed inset-0 flex items-start justify-center pt-4 pointer-events-none z-0">
-        <h1 className="text-[200px] font-bold text-gray-200 opacity-30 select-none leading-none">
-          in the zone trader
-        </h1>
+    <div className="min-h-screen bg-white relative">
+      {/* Grid Background - Centered 1280px container, then extend outward */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}>
+        {/* Center 1280px grid (16 columns) */}
+        <div style={{
+          width: '1280px',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundSize: '1280px 100%',
+          backgroundPosition: 'left top',
+          backgroundRepeat: 'no-repeat'
+        }} />
+        
+        {/* Left extension - start from 80px before center grid */}
+        <div style={{
+          position: 'absolute',
+          right: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`,
+          backgroundPosition: 'right top'
+        }} />
+        
+        {/* Right extension */}
+        <div style={{
+          position: 'absolute',
+          left: 'calc(50% + 640px)',
+          width: '50vw',
+          height: '100%',
+          backgroundImage: `repeating-linear-gradient(to right, rgba(217, 217, 217, 0.5) 0px, rgba(217, 217, 217, 0.5) 1px, transparent 1px, transparent 80px)`
+        }} />
       </div>
 
       {/* Main Content */}
